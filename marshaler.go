@@ -1,6 +1,7 @@
 package xstrings
 
 import (
+	"encoding"
 	"encoding/json"
 	"fmt"
 	"reflect"
@@ -94,7 +95,6 @@ func (m *Marshaler) MarshalByValue(val reflect.Value) (string, error) {
 		indent = DefaultIndent
 	}
 
-	ifc := val.Interface()
 	typ := val.Type()
 	if typ.Kind() == reflect.Ptr {
 		if val.IsNil() {
@@ -102,6 +102,29 @@ func (m *Marshaler) MarshalByValue(val reflect.Value) (string, error) {
 		}
 		val = val.Elem()
 		typ = typ.Elem()
+	}
+	ifc := val.Interface()
+
+	if t, ok := ifc.(time.Time); ok {
+		if m.FuncFormatTime != nil {
+			str = m.FuncFormatTime(t)
+		} else {
+			str = t.Format(timeLayout)
+		}
+		return str, nil
+	}
+
+	if t, ok := ifc.(fmt.Stringer); ok {
+		return t.String(), nil
+	}
+
+	if t, ok := ifc.(encoding.TextMarshaler); ok {
+		var data []byte
+		data, err = t.MarshalText()
+		if err != nil {
+			return "", newFormatError(err)
+		}
+		return string(data), nil
 	}
 
 	tryFmtPrint := false
