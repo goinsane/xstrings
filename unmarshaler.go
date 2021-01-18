@@ -45,17 +45,27 @@ func (u *Unmarshaler) UnmarshalByValue(str string, val reflect.Value) error {
 		timeLocation = DefaultTimeLocation
 	}
 
-	v := val
-	typ := val.Type()
-
-	if typ.Kind() != reflect.Ptr {
+	if val.Type().Kind() != reflect.Ptr {
 		if !val.CanAddr() {
 			return newError(ErrCanNotGetAddr)
 		}
-		v = val.Addr()
+		val = val.Addr()
 	}
-	if v.IsNil() {
+	if val.IsNil() {
 		return newError(ErrNilPointer)
+	}
+
+	v := val
+	val = v.Elem()
+	typ := val.Type()
+
+	if typ.Kind() == reflect.Ptr {
+		if str == "" {
+			val.Set(reflect.Zero(typ))
+			return nil
+		}
+		val.Set(reflect.New(typ.Elem()))
+		v = val
 	}
 
 	ifc := v.Interface()
@@ -210,19 +220,19 @@ func (u *Unmarshaler) Parse(str string, typ reflect.Type) (interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
+	if typ.Kind() == reflect.Ptr && val.IsNil() {
+		return nil, nil
+	}
 	return val.Interface(), nil
 }
 
 func (u *Unmarshaler) ParseToValue(str string, typ reflect.Type) (reflect.Value, error) {
-	val := reflect.New(typ).Elem()
-	if typ.Kind() == reflect.Ptr {
-		val.Set(reflect.New(typ.Elem()))
-	}
+	val := reflect.New(typ)
 	err := u.UnmarshalByValue(str, val)
 	if err != nil {
 		return reflect.Value{}, err
 	}
-	return val, nil
+	return val.Elem(), nil
 }
 
 var (
