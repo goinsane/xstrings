@@ -10,7 +10,8 @@ import (
 )
 
 type Unmarshaler struct {
-	IntBase      int
+	IntBase int
+
 	TimeLayout   string
 	TimeLocation *time.Location
 
@@ -23,6 +24,12 @@ type Unmarshaler struct {
 	FuncUnmarshalData func(str string, ifc interface{}) error
 }
 
+func NewUnmarshaler() *Unmarshaler {
+	return &Unmarshaler{
+		IntBase: -1,
+	}
+}
+
 func (u *Unmarshaler) Unmarshal(str string, ifc interface{}) error {
 	return u.UnmarshalByValue(str, reflect.ValueOf(ifc))
 }
@@ -31,7 +38,7 @@ func (u *Unmarshaler) UnmarshalByValue(str string, val reflect.Value) error {
 	var err error
 
 	intBase := u.IntBase
-	if intBase == 0 {
+	if intBase < 0 {
 		intBase = DefaultIntBase
 	}
 
@@ -56,7 +63,7 @@ func (u *Unmarshaler) UnmarshalByValue(str string, val reflect.Value) error {
 	}
 
 	v := val
-	val = v.Elem()
+	val = val.Elem()
 	typ := val.Type()
 
 	if typ.Kind() == reflect.Ptr {
@@ -66,6 +73,8 @@ func (u *Unmarshaler) UnmarshalByValue(str string, val reflect.Value) error {
 		}
 		val.Set(reflect.New(typ.Elem()))
 		v = val
+		val = val.Elem()
+		typ = typ.Elem()
 	}
 
 	ifc := v.Interface()
@@ -93,7 +102,7 @@ func (u *Unmarshaler) UnmarshalByValue(str string, val reflect.Value) error {
 	}
 
 	var tryFmtScan bool
-	switch v.Type().Elem().Kind() {
+	switch typ.Kind() {
 	case reflect.Bool:
 		var x bool
 		if u.FuncParseBool != nil {
@@ -104,7 +113,7 @@ func (u *Unmarshaler) UnmarshalByValue(str string, val reflect.Value) error {
 		if err != nil {
 			break
 		}
-		v.Elem().SetBool(x)
+		val.SetBool(x)
 
 	case reflect.Int:
 		fallthrough
@@ -124,7 +133,7 @@ func (u *Unmarshaler) UnmarshalByValue(str string, val reflect.Value) error {
 		if err != nil {
 			break
 		}
-		v.Elem().SetInt(x)
+		val.SetInt(x)
 
 	case reflect.Uint:
 		fallthrough
@@ -146,7 +155,7 @@ func (u *Unmarshaler) UnmarshalByValue(str string, val reflect.Value) error {
 		if err != nil {
 			break
 		}
-		v.Elem().SetUint(x)
+		val.SetUint(x)
 
 	case reflect.Float32:
 		fallthrough
@@ -160,7 +169,7 @@ func (u *Unmarshaler) UnmarshalByValue(str string, val reflect.Value) error {
 		if err != nil {
 			break
 		}
-		v.Elem().SetFloat(x)
+		val.SetFloat(x)
 
 	case reflect.Complex64:
 		fallthrough
@@ -178,10 +187,10 @@ func (u *Unmarshaler) UnmarshalByValue(str string, val reflect.Value) error {
 		if err != nil {
 			break
 		}
-		v.Elem().SetComplex(x)
+		val.SetComplex(x)
 
 	case reflect.String:
-		v.Elem().SetString(str)
+		val.SetString(str)
 
 	case reflect.Array:
 		fallthrough
