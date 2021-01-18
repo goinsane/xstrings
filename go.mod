@@ -1,3 +1,3 @@
 module github.com/goinsane/xstrings
 
-go 1.11
+go 1.1
