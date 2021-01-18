@@ -1,6 +1,7 @@
 package xstrings
 
 import (
+	"bytes"
 	"encoding"
 	"encoding/json"
 	"fmt"
@@ -22,8 +23,9 @@ type Marshaler struct {
 	ComplexFmt  byte
 	ComplexPrec int
 
-	Prefix string
-	Indent string
+	Prefix  string
+	Indent  string
+	Compact bool
 
 	FuncFormatBool    func(v bool) string
 	FuncFormatInt     func(v int64) string
@@ -94,6 +96,8 @@ func (m *Marshaler) MarshalByValue(val reflect.Value) (string, error) {
 	if indent == "" {
 		indent = DefaultIndent
 	}
+
+	compact := m.Compact
 
 	typ := val.Type()
 	if typ.Kind() == reflect.Ptr {
@@ -266,7 +270,18 @@ func (m *Marshaler) MarshalByValue(val reflect.Value) (string, error) {
 	case reflect.Struct:
 		var data []byte
 		data, err = json.MarshalIndent(dataVal, "", indent)
-		str = fmt.Sprintf("%s%s", prefix, data)
+		if err != nil {
+			break
+		}
+		if compact {
+			buf := bytes.NewBuffer(make([]byte, 0, len(data)))
+			err = json.Compact(buf, data)
+			if err != nil {
+				break
+			}
+			data = buf.Bytes()
+		}
+		str = string(data)
 
 	default:
 		tryFmtPrint = true
