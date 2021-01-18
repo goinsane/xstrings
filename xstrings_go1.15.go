@@ -8,4 +8,5 @@ import (
 
 func init() {
 	parseComplex = strconv.ParseComplex
+	formatComplex = strconv.FormatComplex
 }

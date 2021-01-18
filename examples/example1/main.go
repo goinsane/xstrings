@@ -31,12 +31,16 @@ func main() {
 	fmt.Println(y)
 
 	z := 10
-	ifc, err := p.Parse(str, reflect.TypeOf(&z))
+	ifc, err := p.Parse("25", reflect.TypeOf(z))
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
-	fmt.Println(*ifc.(*int))
+	if ifc == nil {
+		fmt.Println("nil1")
+		return
+	}
+	fmt.Println(ifc.(int))
 
 	var s struct {
 		X int
@@ -51,10 +55,10 @@ func main() {
 
 	var a *int
 	//a = new(int)
-	err = p.Unmarshal(`10`, a)
+	err = p.Unmarshal(`10`, &a)
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
-	fmt.Println(a)
+	fmt.Println(*a)
 }

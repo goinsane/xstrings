@@ -1,0 +1,275 @@
+package xstrings
+
+import (
+	"encoding/json"
+	"fmt"
+	"reflect"
+	"strconv"
+	"strings"
+	"time"
+)
+
+type Marshaler struct {
+	IntBase int
+
+	TimeLayout   string
+	TimeLocation *time.Location
+
+	FloatFmt  byte
+	FloatPrec int
+
+	ComplexFmt  byte
+	ComplexPrec int
+
+	Prefix string
+	Indent string
+
+	FuncFormatBool    func(v bool) string
+	FuncFormatInt     func(v int64) string
+	FuncFormatUint    func(v uint64) string
+	FuncFormatFloat   func(v float64) string
+	FuncFormatComplex func(v complex128) string
+	FuncFormatTime    func(v time.Time) string
+	FuncMarshalData   func(v interface{}) (string, error)
+}
+
+func NewMarshaler() *Marshaler {
+	return &Marshaler{
+		IntBase:     -1,
+		FloatPrec:   -2,
+		ComplexPrec: -2,
+	}
+}
+
+func (m *Marshaler) Marshal(ifc interface{}) (string, error) {
+	return m.MarshalByValue(reflect.ValueOf(ifc))
+}
+
+func (m *Marshaler) MarshalByValue(val reflect.Value) (string, error) {
+	var err error
+	var str string
+
+	intBase := m.IntBase
+	if intBase < 0 {
+		intBase = DefaultIntBase
+	}
+
+	timeLayout := m.TimeLayout
+	if timeLayout == "" {
+		timeLayout = DefaultTimeLayout
+	}
+
+	timeLocation := m.TimeLocation
+	if timeLocation == nil {
+		timeLocation = DefaultTimeLocation
+	}
+
+	floatFmt := m.FloatFmt
+	if floatFmt == 0 {
+		floatFmt = DefaultFloatFmt
+	}
+
+	floatPrec := m.FloatPrec
+	if floatPrec < -1 {
+		floatPrec = DefaultFloatPrec
+	}
+
+	complexFmt := m.ComplexFmt
+	if complexFmt == 0 {
+		complexFmt = DefaultComplexFmt
+	}
+
+	complexPrec := m.ComplexPrec
+	if complexPrec < -1 {
+		complexPrec = DefaultComplexPrec
+	}
+
+	prefix := m.Prefix
+	if prefix == "" {
+		prefix = DefaultPrefix
+	}
+
+	indent := m.Indent
+	if indent == "" {
+		indent = DefaultIndent
+	}
+
+	ifc := val.Interface()
+	typ := val.Type()
+	if typ.Kind() == reflect.Ptr {
+		if val.IsNil() {
+			return "", nil
+		}
+		val = val.Elem()
+		typ = typ.Elem()
+	}
+
+	tryFmtPrint := false
+	var boolVal bool
+	var intVal int64
+	var uintVal uint64
+	var floatVal float64
+	var complexVal complex128
+	var stringVal string
+	var dataVal interface{}
+	switch typ.Kind() {
+	case reflect.Bool:
+		boolVal = ifc.(bool)
+	case reflect.Int:
+		intVal = int64(ifc.(int))
+	case reflect.Int8:
+		intVal = int64(ifc.(int8))
+	case reflect.Int16:
+		intVal = int64(ifc.(int16))
+	case reflect.Int32:
+		intVal = int64(ifc.(int32))
+	case reflect.Int64:
+		intVal = ifc.(int64)
+	case reflect.Uint:
+		uintVal = uint64(ifc.(uint))
+	case reflect.Uint8:
+		uintVal = uint64(ifc.(uint8))
+	case reflect.Uint16:
+		uintVal = uint64(ifc.(uint16))
+	case reflect.Uint32:
+		uintVal = uint64(ifc.(uint32))
+	case reflect.Uint64:
+		uintVal = ifc.(uint64)
+	case reflect.Uintptr:
+		uintVal = uint64(ifc.(uintptr))
+	case reflect.Float32:
+		floatVal = float64(ifc.(float32))
+	case reflect.Float64:
+		floatVal = ifc.(float64)
+	case reflect.Complex64:
+		complexVal = complex128(ifc.(complex64))
+	case reflect.Complex128:
+		complexVal = ifc.(complex128)
+	case reflect.String:
+		stringVal = ifc.(string)
+
+	case reflect.Array:
+		fallthrough
+	case reflect.Map:
+		fallthrough
+	case reflect.Slice:
+		fallthrough
+	case reflect.Struct:
+		dataVal = ifc
+
+	default:
+		tryFmtPrint = true
+	}
+
+	if tryFmtPrint {
+		return fmt.Sprintf("%s%v", prefix, ifc), nil
+	}
+
+	if err != nil {
+		return "", newFormatError(err)
+	}
+
+	switch typ.Kind() {
+	case reflect.Bool:
+		if m.FuncFormatBool != nil {
+			str = m.FuncFormatBool(boolVal)
+		} else {
+			str = strconv.FormatBool(boolVal)
+		}
+
+	case reflect.Int:
+		fallthrough
+	case reflect.Int8:
+		fallthrough
+	case reflect.Int16:
+		fallthrough
+	case reflect.Int32:
+		fallthrough
+	case reflect.Int64:
+		if m.FuncFormatInt != nil {
+			str = m.FuncFormatInt(intVal)
+		} else {
+			str = strconv.FormatInt(intVal, intBase)
+		}
+
+	case reflect.Uint:
+		fallthrough
+	case reflect.Uint8:
+		fallthrough
+	case reflect.Uint16:
+		fallthrough
+	case reflect.Uint32:
+		fallthrough
+	case reflect.Uint64:
+		fallthrough
+	case reflect.Uintptr:
+		if m.FuncFormatUint != nil {
+			str = m.FuncFormatUint(uintVal)
+		} else {
+			str = strconv.FormatUint(uintVal, intBase)
+		}
+
+	case reflect.Float32:
+		fallthrough
+	case reflect.Float64:
+		if m.FuncFormatFloat != nil {
+			str = m.FuncFormatFloat(floatVal)
+		} else {
+			str = strconv.FormatFloat(floatVal, floatFmt, floatPrec, 64)
+		}
+
+	case reflect.Complex64:
+		fallthrough
+	case reflect.Complex128:
+		if m.FuncFormatComplex != nil {
+			str = m.FuncFormatComplex(complexVal)
+		} else {
+			if formatComplex == nil {
+				tryFmtPrint = true
+				break
+			}
+			str = formatComplex(complexVal, complexFmt, complexPrec, 128)
+		}
+
+	case reflect.String:
+		str = stringVal
+
+	case reflect.Array:
+		fallthrough
+	case reflect.Map:
+		fallthrough
+	case reflect.Slice:
+		fallthrough
+	case reflect.Struct:
+		var data []byte
+		data, err = json.MarshalIndent(dataVal, "", indent)
+		str = fmt.Sprintf("%s%s", prefix, data)
+
+	default:
+		tryFmtPrint = true
+
+	}
+
+	if tryFmtPrint {
+		return fmt.Sprintf("%s%v", prefix, ifc), nil
+	}
+
+	if err != nil {
+		return "", newFormatError(err)
+	}
+
+	newStr := ""
+	for _, line := range strings.Split(str, "\n") {
+		nl := ""
+		if newStr != "" {
+			nl = "\n"
+		}
+		newStr += nl + prefix + line
+	}
+
+	return newStr, nil
+}
+
+var (
+	formatComplex func(c complex128, fmt byte, prec, bitSize int) string
+)
