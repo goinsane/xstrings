@@ -12,8 +12,7 @@ import (
 type Unmarshaler struct {
 	IntBase int
 
-	TimeLayout   string
-	TimeLocation *time.Location
+	TimeLayout string
 
 	FuncParseBool     func(str string) (bool, error)
 	FuncParseInt      func(str string) (int64, error)
@@ -45,11 +44,6 @@ func (u *Unmarshaler) UnmarshalByValue(str string, val reflect.Value) error {
 	timeLayout := u.TimeLayout
 	if timeLayout == "" {
 		timeLayout = DefaultTimeLayout
-	}
-
-	timeLocation := u.TimeLocation
-	if timeLocation == nil {
-		timeLocation = DefaultTimeLocation
 	}
 
 	if val.Type().Kind() != reflect.Ptr {

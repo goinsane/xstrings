@@ -14,8 +14,7 @@ import (
 type Marshaler struct {
 	IntBase int
 
-	TimeLayout   string
-	TimeLocation *time.Location
+	TimeLayout string
 
 	FloatFmt  byte
 	FloatPrec int
@@ -60,11 +59,6 @@ func (m *Marshaler) MarshalByValue(val reflect.Value) (string, error) {
 	timeLayout := m.TimeLayout
 	if timeLayout == "" {
 		timeLayout = DefaultTimeLayout
-	}
-
-	timeLocation := m.TimeLocation
-	if timeLocation == nil {
-		timeLocation = DefaultTimeLocation
 	}
 
 	floatFmt := m.FloatFmt
