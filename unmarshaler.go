@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-type Parser struct {
+type Unmarshaler struct {
 	IntBase      int
 	TimeLayout   string
 	TimeLocation *time.Location
@@ -20,47 +20,27 @@ type Parser struct {
 	FuncParseFloat    func(str string) (float64, error)
 	FuncParseComplex  func(str string) (complex128, error)
 	FuncParseTime     func(str string) (time.Time, error)
-	FuncUnmarshalData func(str string, v interface{}) error
+	FuncUnmarshalData func(str string, ifc interface{}) error
 }
 
-func (p *Parser) Parse(str string, typ reflect.Type) (interface{}, error) {
-	val, err := p.ParseToValue(str, typ)
-	if err != nil {
-		return nil, err
-	}
-	return val.Interface(), nil
+func (u *Unmarshaler) Unmarshal(str string, ifc interface{}) error {
+	return u.UnmarshalByValue(str, reflect.ValueOf(ifc))
 }
 
-func (p *Parser) ParseToValue(str string, typ reflect.Type) (reflect.Value, error) {
-	val := reflect.New(typ).Elem()
-	if typ.Kind() == reflect.Ptr {
-		val.Set(reflect.New(typ.Elem()))
-	}
-	err := p.UnmarshalByValue(str, val)
-	if err != nil {
-		return reflect.Value{}, err
-	}
-	return val, nil
-}
-
-func (p *Parser) Unmarshal(str string, ifc interface{}) error {
-	return p.UnmarshalByValue(str, reflect.ValueOf(ifc))
-}
-
-func (p *Parser) UnmarshalByValue(str string, val reflect.Value) error {
+func (u *Unmarshaler) UnmarshalByValue(str string, val reflect.Value) error {
 	var err error
 
-	intBase := p.IntBase
+	intBase := u.IntBase
 	if intBase == 0 {
 		intBase = DefaultIntBase
 	}
 
-	timeLayout := p.TimeLayout
+	timeLayout := u.TimeLayout
 	if timeLayout == "" {
 		timeLayout = DefaultTimeLayout
 	}
 
-	timeLocation := p.TimeLocation
+	timeLocation := u.TimeLocation
 	if timeLocation == nil {
 		timeLocation = DefaultTimeLocation
 	}
@@ -74,13 +54,16 @@ func (p *Parser) UnmarshalByValue(str string, val reflect.Value) error {
 		}
 		v = val.Addr()
 	}
+	if v.IsNil() {
+		return newError(ErrNilPointer)
+	}
 
 	ifc := v.Interface()
 
 	if t, ok := ifc.(*time.Time); ok {
 		var t2 time.Time
-		if p.FuncParseTime != nil {
-			t2, err = p.FuncParseTime(str)
+		if u.FuncParseTime != nil {
+			t2, err = u.FuncParseTime(str)
 		} else {
 			t2, err = time.ParseInLocation(timeLayout, str, time.Local)
 		}
@@ -91,8 +74,8 @@ func (p *Parser) UnmarshalByValue(str string, val reflect.Value) error {
 		return nil
 	}
 
-	if u, ok := ifc.(encoding.TextUnmarshaler); ok {
-		err := u.UnmarshalText([]byte(str))
+	if t, ok := ifc.(encoding.TextUnmarshaler); ok {
+		err := t.UnmarshalText([]byte(str))
 		if err != nil {
 			return newParseError(err)
 		}
@@ -103,8 +86,8 @@ func (p *Parser) UnmarshalByValue(str string, val reflect.Value) error {
 	switch v.Type().Elem().Kind() {
 	case reflect.Bool:
 		var x bool
-		if p.FuncParseBool != nil {
-			x, err = p.FuncParseBool(str)
+		if u.FuncParseBool != nil {
+			x, err = u.FuncParseBool(str)
 		} else {
 			x, err = strconv.ParseBool(str)
 		}
@@ -123,8 +106,8 @@ func (p *Parser) UnmarshalByValue(str string, val reflect.Value) error {
 		fallthrough
 	case reflect.Int64:
 		var x int64
-		if p.FuncParseInt != nil {
-			x, err = p.FuncParseInt(str)
+		if u.FuncParseInt != nil {
+			x, err = u.FuncParseInt(str)
 		} else {
 			x, err = strconv.ParseInt(str, intBase, 64)
 		}
@@ -145,8 +128,8 @@ func (p *Parser) UnmarshalByValue(str string, val reflect.Value) error {
 		fallthrough
 	case reflect.Uintptr:
 		var x uint64
-		if p.FuncParseUint != nil {
-			x, err = p.FuncParseUint(str)
+		if u.FuncParseUint != nil {
+			x, err = u.FuncParseUint(str)
 		} else {
 			x, err = strconv.ParseUint(str, 10, 64)
 		}
@@ -159,8 +142,8 @@ func (p *Parser) UnmarshalByValue(str string, val reflect.Value) error {
 		fallthrough
 	case reflect.Float64:
 		var x float64
-		if p.FuncParseFloat != nil {
-			x, err = p.FuncParseFloat(str)
+		if u.FuncParseFloat != nil {
+			x, err = u.FuncParseFloat(str)
 		} else {
 			x, err = strconv.ParseFloat(str, 64)
 		}
@@ -173,8 +156,8 @@ func (p *Parser) UnmarshalByValue(str string, val reflect.Value) error {
 		fallthrough
 	case reflect.Complex128:
 		var x complex128
-		if p.FuncParseComplex != nil {
-			x, err = p.FuncParseComplex(str)
+		if u.FuncParseComplex != nil {
+			x, err = u.FuncParseComplex(str)
 		} else {
 			if parseComplex == nil {
 				tryFmtScan = true
@@ -197,8 +180,8 @@ func (p *Parser) UnmarshalByValue(str string, val reflect.Value) error {
 	case reflect.Slice:
 		fallthrough
 	case reflect.Struct:
-		if p.FuncUnmarshalData != nil {
-			err = p.FuncUnmarshalData(str, ifc)
+		if u.FuncUnmarshalData != nil {
+			err = u.FuncUnmarshalData(str, ifc)
 		} else {
 			err = json.Unmarshal([]byte(str), ifc)
 		}
@@ -220,6 +203,26 @@ func (p *Parser) UnmarshalByValue(str string, val reflect.Value) error {
 		return newParseError(err)
 	}
 	return nil
+}
+
+func (u *Unmarshaler) Parse(str string, typ reflect.Type) (interface{}, error) {
+	val, err := u.ParseToValue(str, typ)
+	if err != nil {
+		return nil, err
+	}
+	return val.Interface(), nil
+}
+
+func (u *Unmarshaler) ParseToValue(str string, typ reflect.Type) (reflect.Value, error) {
+	val := reflect.New(typ).Elem()
+	if typ.Kind() == reflect.Ptr {
+		val.Set(reflect.New(typ.Elem()))
+	}
+	err := u.UnmarshalByValue(str, val)
+	if err != nil {
+		return reflect.Value{}, err
+	}
+	return val, nil
 }
 
 var (

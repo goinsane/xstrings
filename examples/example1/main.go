@@ -10,7 +10,7 @@ import (
 )
 
 func main() {
-	p := xstrings.Parser{}
+	p := xstrings.Unmarshaler{}
 
 	str := "10"
 
@@ -42,10 +42,19 @@ func main() {
 		X int
 		Y int
 	}
-	err = p.Unmarshal(`{"X": 5, "Y": 6}`, s)
+	err = p.Unmarshal(`{"X": 5, "Y": 6}`, &s)
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
 	fmt.Println(s)
+
+	var a *int
+	//a = new(int)
+	err = p.Unmarshal(`10`, a)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	fmt.Println(a)
 }

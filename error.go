@@ -7,6 +7,7 @@ import (
 
 var (
 	ErrCanNotGetAddr = errors.New("can not get address of value")
+	ErrNilPointer    = errors.New("nil pointer error")
 )
 
 // Error is type of error
