@@ -7,8 +7,7 @@ import (
 var (
 	DefaultIntBase = 10
 
-	DefaultTimeLayout   = "2006-01-02T15:04:05"
-	DefaultTimeLocation = time.Local
+	DefaultTimeLayout   = time.RFC3339
 
 	DefaultFloatFmt  = byte('f')
 	DefaultFloatPrec = -1
