@@ -291,9 +291,9 @@ func (m *Marshaler) MarshalByValue(val reflect.Value) (string, error) {
 	}
 
 	newStr := ""
-	for _, line := range strings.Split(str, "\n") {
+	for idx, line := range strings.Split(str, "\n") {
 		nl := ""
-		if newStr != "" {
+		if idx > 0 {
 			nl = "\n"
 		}
 		newStr += nl + prefix + line
