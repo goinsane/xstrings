@@ -33,9 +33,7 @@ func (u *Unmarshaler) Unmarshal(str string, ifc interface{}) error {
 	return u.UnmarshalByValue(str, reflect.ValueOf(ifc))
 }
 
-func (u *Unmarshaler) UnmarshalByValue(str string, val reflect.Value) error {
-	var err error
-
+func (u *Unmarshaler) UnmarshalByValue(str string, val reflect.Value) (err error) {
 	intBase := u.IntBase
 	if intBase < 0 {
 		intBase = DefaultIntBase
@@ -57,7 +55,7 @@ func (u *Unmarshaler) UnmarshalByValue(str string, val reflect.Value) error {
 	}
 
 	v := val
-	val = val.Elem()
+	val = v.Elem()
 	typ := val.Type()
 
 	if typ.Kind() == reflect.Ptr {
@@ -65,10 +63,15 @@ func (u *Unmarshaler) UnmarshalByValue(str string, val reflect.Value) error {
 			val.Set(reflect.Zero(typ))
 			return nil
 		}
-		val.Set(reflect.New(typ.Elem()))
-		v = val
-		val = val.Elem()
-		typ = typ.Elem()
+		v = reflect.New(typ.Elem())
+		defer func(val reflect.Value) {
+			if err != nil {
+				return
+			}
+			val.Set(v)
+		}(val)
+		val = v.Elem()
+		typ = val.Type()
 	}
 
 	ifc := v.Interface()
