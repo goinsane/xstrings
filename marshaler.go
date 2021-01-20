@@ -116,6 +116,10 @@ func (m *Marshaler) MarshalByValue(val reflect.Value) (string, error) {
 		return t.String(), nil
 	}
 
+	if t, ok := ifc.(error); ok {
+		return t.Error(), nil
+	}
+
 	if t, ok := ifc.(encoding.TextMarshaler); ok {
 		var data []byte
 		data, err = t.MarshalText()
