@@ -7,7 +7,7 @@ import (
 var (
 	DefaultIntBase = 10
 
-	DefaultTimeLayout   = time.RFC3339
+	DefaultTimeLayout = time.RFC3339
 
 	DefaultFloatFmt  = byte('f')
 	DefaultFloatPrec = -1
@@ -16,5 +16,5 @@ var (
 	DefaultComplexPrec = -1
 
 	DefaultPrefix = ""
-	DefaultIndent = "  "
+	DefaultIndent = ""
 )

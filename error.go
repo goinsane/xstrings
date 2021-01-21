@@ -5,18 +5,16 @@ import (
 	"fmt"
 )
 
-var (
-	ErrCanNotGetAddr = errors.New("can not get address of value")
-	ErrNilPointer    = errors.New("nil pointer error")
-)
-
 // Error is type of error
 type Error struct {
 	err error
 }
 
 // newError wraps err into Error
-func newError(err error) *Error {
+func newError(err error) error {
+	if err == nil {
+		return nil
+	}
 	return &Error{
 		err: err,
 	}
@@ -41,7 +39,10 @@ type ParseError struct {
 }
 
 // newParseError wraps err into ParseError
-func newParseError(err error) *Error {
+func newParseError(err error) error {
+	if err == nil {
+		return nil
+	}
 	return newError(&ParseError{
 		err: err,
 	})
@@ -66,8 +67,11 @@ type FormatError struct {
 	err error
 }
 
-// newFormatError wraps err into ParseError
-func newFormatError(err error) *Error {
+// newFormatError wraps err into FormatError
+func newFormatError(err error) error {
+	if err == nil {
+		return nil
+	}
 	return newError(&FormatError{
 		err: err,
 	})
@@ -86,3 +90,8 @@ func (e *FormatError) Error() string {
 func (e *FormatError) Unwrap() error {
 	return e.err
 }
+
+var (
+	ErrCanNotGetAddr = errors.New("can not get address of value")
+	ErrNilPointer    = errors.New("nil pointer error")
+)
