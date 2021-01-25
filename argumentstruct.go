@@ -10,40 +10,39 @@ import (
 type ArgumentStruct struct {
 	Unmarshaler  *Unmarshaler
 	StructTagKey string
+	FieldOffset  int
+	ArgCountMin  int
+	ArgCountMax  int
 }
 
-func (a *ArgumentStruct) Unmarshal(ifc interface{}, offset, countMin, countMax int, args ...string) error {
-	return a.UnmarshalByValue(reflect.ValueOf(ifc), offset, countMin, countMax, args...)
+func (a *ArgumentStruct) Unmarshal(ifc interface{}, args ...string) error {
+	return a.UnmarshalByValue(reflect.ValueOf(ifc), args...)
 }
 
-func (a *ArgumentStruct) UnmarshalByValue(val reflect.Value, offset, countMin, countMax int, args ...string) error {
+func (a *ArgumentStruct) UnmarshalByValue(val reflect.Value, args ...string) error {
 	sizeArgs := len(args)
-	if countMax > 0 && sizeArgs > countMax {
+	if a.ArgCountMax > 0 && sizeArgs > a.ArgCountMax {
 		return ErrArgumentCountExceeded
 	}
 
 	var err error
 	argIdx := 0
-	e := a.fieldsFunc(val, offset, func(fieldName string, fieldVal reflect.Value) bool {
+	e := a.fieldsFunc(val, func(fieldName string, fieldVal reflect.Value) bool {
 		fieldMinArgCount := getArgumentStructFieldMinArgCount(fieldVal.Type())
 		if lastArgIdx := argIdx + fieldMinArgCount; lastArgIdx > sizeArgs {
 			if argIdx < sizeArgs {
 				err = &MissingArgumentError{fieldName}
 				return true
 			}
-			if argIdx < countMin {
+			if argIdx < a.ArgCountMin {
 				err = &MissingArgumentError{fieldName}
 				return true
 			}
-			if countMax > 0 && countMax <= argIdx {
+			if a.ArgCountMax > 0 && a.ArgCountMax <= argIdx {
 				return true
 			}
 
 			fieldVal.Set(reflect.Zero(fieldVal.Type()))
-
-			if typ := fieldVal.Type(); typ.Kind() == reflect.Slice || (typ.Kind() == reflect.Ptr && typ.Elem().Kind() == reflect.Slice) {
-				return true
-			}
 
 			argIdx += fieldMinArgCount
 			return false
@@ -55,9 +54,6 @@ func (a *ArgumentStruct) UnmarshalByValue(val reflect.Value, offset, countMin, c
 			return true
 		}
 		argIdx += count
-		if typ := fieldVal.Type(); typ.Kind() == reflect.Slice || (typ.Kind() == reflect.Ptr && typ.Elem().Kind() == reflect.Slice) {
-			return true
-		}
 		return false
 	})
 	if e != nil {
@@ -66,14 +62,17 @@ func (a *ArgumentStruct) UnmarshalByValue(val reflect.Value, offset, countMin, c
 	return err
 }
 
-func (a *ArgumentStruct) Fields(ifc interface{}, offset, countMin int) (ArgumentStructFields, error) {
-	return a.FieldsByValue(reflect.ValueOf(ifc), offset, countMin)
+func (a *ArgumentStruct) Fields(ifc interface{}) (ArgumentStructFields, error) {
+	return a.FieldsByValue(reflect.ValueOf(ifc))
 }
 
-func (a *ArgumentStruct) FieldsByValue(val reflect.Value, offset, countMin int) (ArgumentStructFields, error) {
+func (a *ArgumentStruct) FieldsByValue(val reflect.Value) (ArgumentStructFields, error) {
 	result := make(ArgumentStructFields, 0, 1024)
 	argIdx := 0
-	err := a.fieldsFunc(val, offset, func(fieldName string, fieldVal reflect.Value) bool {
+	err := a.fieldsFunc(val, func(fieldName string, fieldVal reflect.Value) bool {
+		if a.ArgCountMax > 0 && a.ArgCountMax <= argIdx {
+			return true
+		}
 		typ := fieldVal.Type()
 		typ2 := typ
 		isPtr := typ2.Kind() == reflect.Ptr
@@ -83,7 +82,7 @@ func (a *ArgumentStruct) FieldsByValue(val reflect.Value, offset, countMin int) 
 		fieldMinArgCount := getArgumentStructFieldMinArgCount(typ2)
 		result = append(result, ArgumentStructField{
 			Name:        fieldName,
-			Optional:    argIdx >= countMin,
+			Optional:    argIdx >= a.ArgCountMin,
 			MinArgCount: fieldMinArgCount,
 			Variadic:    typ2.Kind() == reflect.Slice,
 		})
@@ -96,12 +95,12 @@ func (a *ArgumentStruct) FieldsByValue(val reflect.Value, offset, countMin int) 
 	return result, nil
 }
 
-func (a *ArgumentStruct) SetField(ifc interface{}, offset int, name string, values ...string) error {
-	return a.SetFieldByValue(reflect.ValueOf(ifc), offset, name, values...)
+func (a *ArgumentStruct) SetField(ifc interface{}, name string, values ...string) error {
+	return a.SetFieldByValue(reflect.ValueOf(ifc), name, values...)
 }
 
-func (a *ArgumentStruct) SetFieldByValue(val reflect.Value, offset int, name string, values ...string) error {
-	fieldVal, err := a.find(val, offset, name)
+func (a *ArgumentStruct) SetFieldByValue(val reflect.Value, name string, values ...string) error {
+	fieldVal, err := a.find(val, name)
 	if err != nil {
 		return err
 	}
@@ -187,10 +186,10 @@ func (a *ArgumentStruct) setFieldVal(val reflect.Value, name string, values ...s
 	return count, nil
 }
 
-func (a *ArgumentStruct) find(val reflect.Value, offset int, name string) (reflect.Value, error) {
+func (a *ArgumentStruct) find(val reflect.Value, name string) (reflect.Value, error) {
 	var result reflect.Value
 
-	err := a.fieldsFunc(val, offset, func(fieldName string, fieldVal reflect.Value) bool {
+	err := a.fieldsFunc(val, func(fieldName string, fieldVal reflect.Value) bool {
 		if fieldName == name {
 			result = fieldVal
 			return true
@@ -208,7 +207,7 @@ func (a *ArgumentStruct) find(val reflect.Value, offset int, name string) (refle
 	return reflect.Value{}, ErrArgumentStructFieldNotFound
 }
 
-func (a *ArgumentStruct) fieldsFunc(val reflect.Value, offset int, f func(fieldName string, fieldVal reflect.Value) bool) error {
+func (a *ArgumentStruct) fieldsFunc(val reflect.Value, f func(fieldName string, fieldVal reflect.Value) bool) error {
 	if val.Type().Kind() != reflect.Ptr {
 		if !val.CanAddr() {
 			return ErrCanNotGetAddr
@@ -227,6 +226,7 @@ func (a *ArgumentStruct) fieldsFunc(val reflect.Value, offset int, f func(fieldN
 		return ErrValueMustBeStruct
 	}
 
+	offset := a.FieldOffset
 	if offset < 0 {
 		offset = 0
 	}
@@ -254,6 +254,10 @@ func (a *ArgumentStruct) fieldsFunc(val reflect.Value, offset int, f func(fieldN
 		}
 
 		if f(fieldName, fieldVal) {
+			break
+		}
+
+		if typ := fieldVal.Type(); typ.Kind() == reflect.Slice || (typ.Kind() == reflect.Ptr && typ.Elem().Kind() == reflect.Slice) {
 			break
 		}
 	}
@@ -306,6 +310,9 @@ func (a ArgumentStructFields) String() string {
 			str += fmt.Sprintf("<%s>%s", field.Name, vari)
 		} else {
 			for i := 0; i < field.MinArgCount; i++ {
+				if i > 0 {
+					str += " "
+				}
 				str += fmt.Sprintf("<%s-%d>", field.Name, i)
 			}
 		}
@@ -327,6 +334,9 @@ func (a ArgumentStructFields) String() string {
 			str += fmt.Sprintf("<%s>%s", field.Name, vari)
 		} else {
 			for i := 0; i < field.MinArgCount; i++ {
+				if i > 0 {
+					str += " "
+				}
 				str += fmt.Sprintf("<%s-%d>", field.Name, i)
 			}
 		}
