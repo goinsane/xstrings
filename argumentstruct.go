@@ -112,16 +112,15 @@ func (a *ArgumentStruct) setFieldVal(val reflect.Value, name string, values ...s
 			}
 			av.Index(i).Set(v)
 		}
-		count = sizeValues
-		if count > typ2.Len() {
-			count = typ2.Len()
-		}
 	default:
-		count = 1
 	}
 
 	switch typ2.Kind() {
 	case reflect.Array:
+		count = sizeValues
+		if count > typ2.Len() {
+			count = typ2.Len()
+		}
 		if isPtr {
 			if sizeValues != typ2.Len() {
 				val.Set(reflect.New(reflect.ArrayOf(typ2.Len(), typ2.Elem())))
@@ -135,6 +134,7 @@ func (a *ArgumentStruct) setFieldVal(val reflect.Value, name string, values ...s
 		reflect.Copy(val, av)
 
 	case reflect.Slice:
+		count = sizeValues
 		slc := av.Slice(0, av.Len())
 		if isPtr {
 			val.Set(reflect.New(reflect.SliceOf(typ2.Elem())))
@@ -144,6 +144,7 @@ func (a *ArgumentStruct) setFieldVal(val reflect.Value, name string, values ...s
 		val.Set(slc)
 
 	default:
+		count = 1
 		v, err := unmarshaler.ParseToValue(values[0], typ)
 		if err != nil {
 			return 0, &ArgumentParseError{name, err}
