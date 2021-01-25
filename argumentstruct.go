@@ -71,12 +71,8 @@ func (a *ArgumentStruct) SetFieldByValue(val reflect.Value, offset int, name str
 		return err
 	}
 
-	if fieldVal.CanSet() {
-		_, err = a.setFieldVal(fieldVal, name, values...)
-		return err
-	}
-
-	return nil
+	_, err = a.setFieldVal(fieldVal, name, values...)
+	return err
 }
 
 func (a *ArgumentStruct) setFieldVal(val reflect.Value, name string, values ...string) (count int, err error) {
