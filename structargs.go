@@ -1,7 +1,6 @@
 package xstrings
 
 import (
-	"fmt"
 	"reflect"
 	"strings"
 	"unicode"
@@ -71,11 +70,11 @@ func (s *StructArgs) UnmarshalByValue(val reflect.Value, offset, countMin, count
 			if f := val.Field(i); f.CanSet() {
 				f.Set(reflect.Zero(sf.Type))
 			}
-			if kind := sf.Type.Kind(); kind == reflect.Ptr || kind == reflect.Array || kind == reflect.Slice {
+			if kind := sf.Type.Kind(); kind == reflect.Ptr || kind == reflect.Slice {
 				if kind == reflect.Array || kind == reflect.Slice {
 					break
 				}
-				if kind := sf.Type.Elem().Kind(); kind == reflect.Array || kind == reflect.Slice {
+				if kind := sf.Type.Elem().Kind(); kind == reflect.Slice {
 					break
 				}
 			}
@@ -147,15 +146,15 @@ func (s *StructArgs) setFieldVal(val reflect.Value, name string, values ...strin
 			av.Index(i).Set(v)
 		}
 		count = sizeValues
+		if count > typ2.Len() {
+			count = typ2.Len()
+		}
 	default:
 		count = 1
 	}
 
 	switch typ2.Kind() {
 	case reflect.Array:
-		if sizeValues > typ2.Len() {
-			return 0, fmt.Errorf("value count of <%s> must be less or equal to %d", name, typ2.Len())
-		}
 		if isPtr {
 			if sizeValues != typ2.Len() {
 				val.Set(reflect.New(reflect.ArrayOf(typ2.Len(), typ2.Elem())))
