@@ -63,7 +63,42 @@ func (e *FormatError) Unwrap() error {
 	return e.err
 }
 
+type MissingArgumentError struct {
+	name string
+}
+
+func (e *MissingArgumentError) Error() string {
+	return fmt.Sprintf("missing argument <%s>", e.name)
+}
+
+func (e *MissingArgumentError) Unwrap() error {
+	return nil
+}
+
+func (e *MissingArgumentError) ArgName() string {
+	return e.name
+}
+
+type ArgumentParseError struct {
+	name string
+	err  error
+}
+
+func (e *ArgumentParseError) Error() string {
+	return fmt.Sprintf("argument <%s> parse error: %v", e.name, e.err)
+}
+
+func (e *ArgumentParseError) Unwrap() error {
+	return e.err
+}
+
+func (e *ArgumentParseError) ArgName() string {
+	return e.name
+}
+
 var (
-	ErrCanNotGetAddr = errors.New("can not get address of value")
-	ErrNilPointer    = errors.New("nil pointer error")
+	ErrCanNotGetAddr         = errors.New("can not get address of value")
+	ErrNilPointer            = errors.New("nil pointer error")
+	ErrValueMustBeStruct     = errors.New("value must be struct")
+	ErrArgumentCountExceeded = errors.New("argument count exceeded")
 )
