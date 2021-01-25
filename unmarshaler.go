@@ -47,12 +47,12 @@ func (u *Unmarshaler) UnmarshalByValue(str string, val reflect.Value) (err error
 
 	if val.Type().Kind() != reflect.Ptr {
 		if !val.CanAddr() {
-			return newError(ErrCanNotGetAddr)
+			return ErrCanNotGetAddr
 		}
 		val = val.Addr()
 	}
 	if val.IsNil() {
-		return newError(ErrNilPointer)
+		return ErrNilPointer
 	}
 
 	v := val
