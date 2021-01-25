@@ -25,21 +25,19 @@ type Marshaler struct {
 	Prefix string
 	Indent string
 
-	FuncFormatBool    func(v bool) string
-	FuncFormatInt     func(v int64) string
-	FuncFormatUint    func(v uint64) string
-	FuncFormatFloat   func(v float64) string
-	FuncFormatComplex func(v complex128) string
-	FuncFormatTime    func(v time.Time) string
-	FuncMarshalData   func(v interface{}) (string, error)
+	FuncFormatBool     func(v bool) string
+	FuncFormatInt      func(v int64) string
+	FuncFormatUint     func(v uint64) string
+	FuncFormatFloat    func(v float64) string
+	FuncFormatComplex  func(v complex128) string
+	FuncFormatTime     func(v time.Time) string
+	FuncFormatDuration func(v time.Duration) string
+	FuncMarshalData    func(v interface{}) (string, error)
 }
 
 func NewMarshaler() *Marshaler {
-	return &Marshaler{
-		IntBase:     -1,
-		FloatPrec:   -2,
-		ComplexPrec: -2,
-	}
+	r := initialDefaultMarshaler
+	return &r
 }
 
 func (m *Marshaler) Marshal(ifc interface{}) (string, error) {
@@ -105,6 +103,15 @@ func (m *Marshaler) MarshalByValue(val reflect.Value) (string, error) {
 			str = m.FuncFormatTime(t)
 		} else {
 			str = t.Format(timeLayout)
+		}
+		return str, nil
+	}
+
+	if t, ok := ifc.(time.Duration); ok {
+		if m.FuncFormatDuration != nil {
+			str = m.FuncFormatDuration(t)
+		} else {
+			str = t.String()
 		}
 		return str, nil
 	}
@@ -263,20 +270,24 @@ func (m *Marshaler) MarshalByValue(val reflect.Value) (string, error) {
 	case reflect.Slice:
 		fallthrough
 	case reflect.Struct:
-		var data []byte
-		data, err = json.Marshal(dataVal)
-		if err != nil {
-			break
-		}
-		if indent != "" {
-			buf := bytes.NewBuffer(make([]byte, 0, 4*len(data)))
-			err = json.Indent(buf, data, "", indent)
+		if m.FuncMarshalData != nil {
+			str, err = m.FuncMarshalData(dataVal)
+		} else {
+			var data []byte
+			data, err = json.Marshal(dataVal)
 			if err != nil {
 				break
 			}
-			data = buf.Bytes()
+			if indent != "" {
+				buf := bytes.NewBuffer(make([]byte, 0, 4*len(data)))
+				err = json.Indent(buf, data, "", indent)
+				if err != nil {
+					break
+				}
+				data = buf.Bytes()
+			}
+			str = string(data)
 		}
-		str = string(data)
 
 	default:
 		tryFmtPrint = true
@@ -284,7 +295,8 @@ func (m *Marshaler) MarshalByValue(val reflect.Value) (string, error) {
 	}
 
 	if tryFmtPrint {
-		return fmt.Sprintf("%s%v", prefix, ifc), nil
+		str = fmt.Sprintf("%v", ifc)
+		err = nil
 	}
 
 	if err != nil {

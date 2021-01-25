@@ -17,30 +17,16 @@ func ToUpperBeginning(str string) string {
 	if str == "" {
 		return ""
 	}
-	buf := make([]byte, 0, len(str))
-	var idx int
-	for _, r := range str {
-		if idx <= 0 {
-			r = unicode.ToUpper(r)
-		}
-		buf = append(buf, []byte(string(r))...)
-		idx++
-	}
-	return string(buf)
+	runes := []rune(str)
+	runes[0] = unicode.ToUpper(runes[0])
+	return string(runes)
 }
 
 func ToLowerBeginning(str string) string {
 	if str == "" {
 		return ""
 	}
-	buf := make([]byte, 0, len(str))
-	var idx int
-	for _, r := range str {
-		if idx <= 0 {
-			r = unicode.ToLower(r)
-		}
-		buf = append(buf, []byte(string(r))...)
-		idx++
-	}
-	return string(buf)
+	runes := []rune(str)
+	runes[0] = unicode.ToLower(runes[0])
+	return string(runes)
 }

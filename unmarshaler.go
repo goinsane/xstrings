@@ -21,13 +21,13 @@ type Unmarshaler struct {
 	FuncParseFloat    func(str string) (float64, error)
 	FuncParseComplex  func(str string) (complex128, error)
 	FuncParseTime     func(str string) (time.Time, error)
+	FuncParseDuration func(str string) (time.Duration, error)
 	FuncUnmarshalData func(str string, ifc interface{}) error
 }
 
 func NewUnmarshaler() *Unmarshaler {
-	return &Unmarshaler{
-		IntBase: -1,
-	}
+	r := initialDefaultUnmarshaler
+	return &r
 }
 
 func (u *Unmarshaler) Unmarshal(str string, ifc interface{}) error {
@@ -47,12 +47,12 @@ func (u *Unmarshaler) UnmarshalByValue(str string, val reflect.Value) (err error
 
 	if val.Type().Kind() != reflect.Ptr {
 		if !val.CanAddr() {
-			return newError(ErrCanNotGetAddr)
+			return ErrCanNotGetAddr
 		}
 		val = val.Addr()
 	}
 	if val.IsNil() {
-		return newError(ErrNilPointer)
+		return ErrNilPointer
 	}
 
 	v := val
@@ -83,6 +83,20 @@ func (u *Unmarshaler) UnmarshalByValue(str string, val reflect.Value) (err error
 			t2, err = u.FuncParseTime(str)
 		} else {
 			t2, err = time.ParseInLocation(timeLayout, str, time.Local)
+		}
+		if err != nil {
+			return newParseError(err)
+		}
+		*t = t2
+		return nil
+	}
+
+	if t, ok := ifc.(*time.Duration); ok {
+		var t2 time.Duration
+		if u.FuncParseDuration != nil {
+			t2, err = u.FuncParseDuration(str)
+		} else {
+			t2, err = time.ParseDuration(str)
 		}
 		if err != nil {
 			return newParseError(err)
@@ -213,14 +227,10 @@ func (u *Unmarshaler) UnmarshalByValue(str string, val reflect.Value) (err error
 
 	}
 
-	if !tryFmtScan {
-		if err != nil {
-			return newParseError(err)
-		}
-		return nil
+	if tryFmtScan {
+		_, err = fmt.Sscanf(str, "%v", ifc)
 	}
 
-	_, err = fmt.Sscanf(str, "%v", ifc)
 	if err != nil {
 		return newParseError(err)
 	}
