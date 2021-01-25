@@ -25,9 +25,8 @@ type Unmarshaler struct {
 }
 
 func NewUnmarshaler() *Unmarshaler {
-	return &Unmarshaler{
-		IntBase: -1,
-	}
+	r := initialDefaultUnmarshaler
+	return &r
 }
 
 func (u *Unmarshaler) Unmarshal(str string, ifc interface{}) error {

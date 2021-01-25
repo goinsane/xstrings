@@ -35,11 +35,8 @@ type Marshaler struct {
 }
 
 func NewMarshaler() *Marshaler {
-	return &Marshaler{
-		IntBase:     -1,
-		FloatPrec:   -2,
-		ComplexPrec: -2,
-	}
+	r := initialDefaultMarshaler
+	return &r
 }
 
 func (m *Marshaler) Marshal(ifc interface{}) (string, error) {

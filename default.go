@@ -5,6 +5,9 @@ import (
 )
 
 var (
+	DefaultUnmarshaler = NewUnmarshaler()
+	DefaultMarshaler   = NewMarshaler()
+
 	DefaultIntBase = 10
 
 	DefaultTimeLayout = time.RFC3339
@@ -17,4 +20,15 @@ var (
 
 	DefaultPrefix = ""
 	DefaultIndent = ""
+)
+
+var (
+	initialDefaultUnmarshaler = Unmarshaler{
+		IntBase: -1,
+	}
+	initialDefaultMarshaler = Marshaler{
+		IntBase:     -1,
+		FloatPrec:   -2,
+		ComplexPrec: -2,
+	}
 )
