@@ -5,34 +5,6 @@ import (
 	"fmt"
 )
 
-// Error is type of error
-type Error struct {
-	err error
-}
-
-// newError wraps err into Error
-func newError(err error) error {
-	if err == nil {
-		return nil
-	}
-	return &Error{
-		err: err,
-	}
-}
-
-// Error is implementation of error
-func (e *Error) Error() string {
-	if e.err == nil {
-		return "string error"
-	}
-	return e.err.Error()
-}
-
-// Unwrap returns wrapped error
-func (e *Error) Unwrap() error {
-	return e.err
-}
-
 // ParseError is type of error
 type ParseError struct {
 	err error
@@ -43,9 +15,9 @@ func newParseError(err error) error {
 	if err == nil {
 		return nil
 	}
-	return newError(&ParseError{
+	return &ParseError{
 		err: err,
-	})
+	}
 }
 
 // Error is implementation of error
@@ -72,9 +44,9 @@ func newFormatError(err error) error {
 	if err == nil {
 		return nil
 	}
-	return newError(&FormatError{
+	return &FormatError{
 		err: err,
-	})
+	}
 }
 
 // Error is implementation of error
