@@ -263,20 +263,24 @@ func (m *Marshaler) MarshalByValue(val reflect.Value) (string, error) {
 	case reflect.Slice:
 		fallthrough
 	case reflect.Struct:
-		var data []byte
-		data, err = json.Marshal(dataVal)
-		if err != nil {
-			break
-		}
-		if indent != "" {
-			buf := bytes.NewBuffer(make([]byte, 0, 4*len(data)))
-			err = json.Indent(buf, data, "", indent)
+		if m.FuncMarshalData != nil {
+			str, err = m.FuncMarshalData(dataVal)
+		} else {
+			var data []byte
+			data, err = json.Marshal(dataVal)
 			if err != nil {
 				break
 			}
-			data = buf.Bytes()
+			if indent != "" {
+				buf := bytes.NewBuffer(make([]byte, 0, 4*len(data)))
+				err = json.Indent(buf, data, "", indent)
+				if err != nil {
+					break
+				}
+				data = buf.Bytes()
+			}
+			str = string(data)
 		}
-		str = string(data)
 
 	default:
 		tryFmtPrint = true
@@ -284,7 +288,8 @@ func (m *Marshaler) MarshalByValue(val reflect.Value) (string, error) {
 	}
 
 	if tryFmtPrint {
-		return fmt.Sprintf("%s%v", prefix, ifc), nil
+		str = fmt.Sprintf("%v", ifc)
+		err = nil
 	}
 
 	if err != nil {

@@ -213,14 +213,10 @@ func (u *Unmarshaler) UnmarshalByValue(str string, val reflect.Value) (err error
 
 	}
 
-	if !tryFmtScan {
-		if err != nil {
-			return newParseError(err)
-		}
-		return nil
+	if tryFmtScan {
+		_, err = fmt.Sscanf(str, "%v", ifc)
 	}
 
-	_, err = fmt.Sscanf(str, "%v", ifc)
 	if err != nil {
 		return newParseError(err)
 	}
