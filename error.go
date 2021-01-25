@@ -68,7 +68,7 @@ type MissingArgumentError struct {
 }
 
 func (e *MissingArgumentError) Error() string {
-	return fmt.Sprintf("missing argument <%s>", e.name)
+	return fmt.Sprintf("missing argument of <%s>", e.name)
 }
 
 func (e *MissingArgumentError) Unwrap() error {
@@ -85,7 +85,7 @@ type ArgumentParseError struct {
 }
 
 func (e *ArgumentParseError) Error() string {
-	return fmt.Sprintf("argument <%s> parse error: %v", e.name, e.err)
+	return fmt.Sprintf("argument of <%s> parse error: %v", e.name, e.err)
 }
 
 func (e *ArgumentParseError) Unwrap() error {
