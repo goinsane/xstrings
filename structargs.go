@@ -34,40 +34,34 @@ func (s *StructArgs) UnmarshalByValue(val reflect.Value, offset, countMin, count
 		return ErrValueMustBeStruct
 	}
 
-	unmarshaler := s.Unmarshaler
-	if unmarshaler == nil {
-		unmarshaler = DefaultUnmarshaler
-	}
-
-	sizeArgs := len(args)
-
 	if offset < 0 {
 		offset = 0
 	}
 
+	sizeArgs := len(args)
 	if countMax > 0 && sizeArgs > countMax {
 		return ErrArgumentCountExceeded
 	}
 
 	for i, j, k := offset, 0, typ.NumField(); i < k; i++ {
-		var name string
+		var fieldName string
 		sf := typ.Field(i)
 		if s.StructTagKey != "" {
-			name = sf.Tag.Get(s.StructTagKey)
-			if idx := strings.Index(name, ","); idx >= 0 {
-				name = name[:idx]
+			fieldName = sf.Tag.Get(s.StructTagKey)
+			if idx := strings.Index(fieldName, ","); idx >= 0 {
+				fieldName = fieldName[:idx]
 			}
-			if name == "-" {
+			if fieldName == "-" {
 				continue
 			}
 		}
-		if name == "" {
-			name = ToLowerBeginning(sf.Name)
+		if fieldName == "" {
+			fieldName = ToLowerBeginning(sf.Name)
 		}
 
 		if j >= sizeArgs {
 			if j < countMin {
-				return &MissingArgumentError{name}
+				return &MissingArgumentError{fieldName}
 			}
 			if countMax > 0 && countMax <= j {
 				break
@@ -87,7 +81,7 @@ func (s *StructArgs) UnmarshalByValue(val reflect.Value, offset, countMin, count
 		}
 
 		if f := val.Field(i); f.CanSet() {
-			count, err := s.set(name, f, args[j:]...)
+			count, err := s.setFieldVal(f, fieldName, args[j:]...)
 			if err != nil {
 				return err
 			}
@@ -99,11 +93,25 @@ func (s *StructArgs) UnmarshalByValue(val reflect.Value, offset, countMin, count
 	return nil
 }
 
-func (s *StructArgs) Set(name string, args ...string) {
-
+func (s *StructArgs) SetField(ifc interface{}, offset int, name string, values ...string) error {
+	return s.SetFieldByValue(reflect.ValueOf(ifc), offset, name, values...)
 }
 
-func (s *StructArgs) set(name string, val reflect.Value, values ...string) (count int, err error) {
+func (s *StructArgs) SetFieldByValue(val reflect.Value, offset int, name string, values ...string) error {
+	fieldVal, err := s.find(val, offset, name)
+	if err != nil {
+		return err
+	}
+
+	if fieldVal.CanSet() {
+		_, err = s.setFieldVal(fieldVal, name, values...)
+		return err
+	}
+
+	return nil
+}
+
+func (s *StructArgs) setFieldVal(val reflect.Value, name string, values ...string) (count int, err error) {
 	unmarshaler := s.Unmarshaler
 	if unmarshaler == nil {
 		unmarshaler = DefaultUnmarshaler
@@ -143,10 +151,15 @@ func (s *StructArgs) set(name string, val reflect.Value, values ...string) (coun
 
 	switch typ2.Kind() {
 	case reflect.Array:
-		if sizeValues != typ2.Len() {
-			return 0, fmt.Errorf("value count must be equal to %d", typ2.Len())
+		if sizeValues > typ2.Len() {
+			return 0, fmt.Errorf("value count of field <%s> must be less or equal to %d", name, typ2.Len())
 		}
 		if isPtr {
+			if sizeValues != typ2.Len() {
+				val.Set(reflect.New(reflect.ArrayOf(typ2.Len(), typ2.Elem())))
+				reflect.Copy(val.Elem(), av)
+				break
+			}
 			val.Set(av.Addr())
 			break
 		}
@@ -172,4 +185,52 @@ func (s *StructArgs) set(name string, val reflect.Value, values ...string) (coun
 	}
 
 	return count, nil
+}
+
+func (s *StructArgs) find(val reflect.Value, offset int, name string) (reflect.Value, error) {
+	if val.Type().Kind() != reflect.Ptr {
+		if !val.CanAddr() {
+			return reflect.Value{}, ErrCanNotGetAddr
+		}
+		val = val.Addr()
+	}
+	if val.IsNil() {
+		return reflect.Value{}, ErrNilPointer
+	}
+
+	v := val
+	val = v.Elem()
+	typ := val.Type()
+
+	if typ.Kind() != reflect.Struct {
+		return reflect.Value{}, ErrValueMustBeStruct
+	}
+
+	if offset < 0 {
+		offset = 0
+	}
+
+	for i, _, k := offset, 0, typ.NumField(); i < k; i++ {
+		var argName string
+		sf := typ.Field(i)
+		if s.StructTagKey != "" {
+			argName = sf.Tag.Get(s.StructTagKey)
+			if idx := strings.Index(argName, ","); idx >= 0 {
+				argName = argName[:idx]
+			}
+			if argName == "-" {
+				continue
+			}
+		}
+		if argName == "" {
+			argName = ToLowerBeginning(sf.Name)
+		}
+
+		if argName == name {
+			return val.Field(i), nil
+		}
+
+	}
+
+	return reflect.Value{}, nil
 }
