@@ -1,6 +1,7 @@
 package xstrings
 
 import (
+	"fmt"
 	"reflect"
 	"strings"
 	"unicode"
@@ -22,43 +23,77 @@ func (a *ArgumentStruct) UnmarshalByValue(val reflect.Value, offset, countMin, c
 	}
 
 	var err error
-	idx := 0
+	argIdx := 0
 	e := a.fieldsFunc(val, offset, func(fieldName string, fieldVal reflect.Value) bool {
-		if idx >= sizeArgs {
-			if idx < countMin {
+		fieldMinArgCount := getArgumentStructFieldMinArgCount(fieldVal.Type())
+		if lastArgIdx := argIdx + fieldMinArgCount; lastArgIdx > sizeArgs {
+			if argIdx < sizeArgs {
 				err = &MissingArgumentError{fieldName}
 				return true
 			}
-			if countMax > 0 && countMax <= idx {
+			if argIdx < countMin {
+				err = &MissingArgumentError{fieldName}
+				return true
+			}
+			if countMax > 0 && countMax <= argIdx {
 				return true
 			}
 
 			fieldVal.Set(reflect.Zero(fieldVal.Type()))
 
-			if kind := fieldVal.Type().Kind(); kind == reflect.Ptr || kind == reflect.Slice {
-				if kind == reflect.Array || kind == reflect.Slice {
-					return true
-				}
-				if kind := fieldVal.Type().Elem().Kind(); kind == reflect.Slice {
-					return true
-				}
+			if typ := fieldVal.Type(); typ.Kind() == reflect.Slice || (typ.Kind() == reflect.Ptr && typ.Elem().Kind() == reflect.Slice) {
+				return true
 			}
 
+			argIdx += fieldMinArgCount
 			return false
 		}
 
 		var count int
-		count, err = a.setFieldVal(fieldVal, fieldName, args[idx:]...)
+		count, err = a.setFieldVal(fieldVal, fieldName, args[argIdx:]...)
 		if err != nil {
 			return true
 		}
-		idx += count
+		argIdx += count
+		if typ := fieldVal.Type(); typ.Kind() == reflect.Slice || (typ.Kind() == reflect.Ptr && typ.Elem().Kind() == reflect.Slice) {
+			return true
+		}
 		return false
 	})
 	if e != nil {
 		return e
 	}
 	return err
+}
+
+func (a *ArgumentStruct) Fields(ifc interface{}, offset, countMin int) (ArgumentStructFields, error) {
+	return a.FieldsByValue(reflect.ValueOf(ifc), offset, countMin)
+}
+
+func (a *ArgumentStruct) FieldsByValue(val reflect.Value, offset, countMin int) (ArgumentStructFields, error) {
+	result := make(ArgumentStructFields, 0, 1024)
+	argIdx := 0
+	err := a.fieldsFunc(val, offset, func(fieldName string, fieldVal reflect.Value) bool {
+		typ := fieldVal.Type()
+		typ2 := typ
+		isPtr := typ2.Kind() == reflect.Ptr
+		if isPtr {
+			typ2 = typ2.Elem()
+		}
+		fieldMinArgCount := getArgumentStructFieldMinArgCount(typ2)
+		result = append(result, ArgumentStructField{
+			Name:        fieldName,
+			Optional:    argIdx >= countMin,
+			MinArgCount: fieldMinArgCount,
+			Variadic:    typ2.Kind() == reflect.Slice,
+		})
+		argIdx += fieldMinArgCount
+		return false
+	})
+	if err != nil {
+		return nil, err
+	}
+	return result, nil
 }
 
 func (a *ArgumentStruct) SetField(ifc interface{}, offset int, name string, values ...string) error {
@@ -111,11 +146,12 @@ func (a *ArgumentStruct) setFieldVal(val reflect.Value, name string, values ...s
 	default:
 	}
 
+	count = getArgumentStructFieldMinArgCount(typ2)
+
 	switch typ2.Kind() {
 	case reflect.Array:
-		count = sizeValues
-		if count > typ2.Len() {
-			count = typ2.Len()
+		if count > sizeValues {
+			count = sizeValues
 		}
 		if isPtr {
 			if sizeValues != typ2.Len() {
@@ -140,7 +176,6 @@ func (a *ArgumentStruct) setFieldVal(val reflect.Value, name string, values ...s
 		val.Set(slc)
 
 	default:
-		count = 1
 		v, err := unmarshaler.ParseToValue(values[0], typ)
 		if err != nil {
 			return 0, &ArgumentParseError{name, err}
@@ -223,4 +258,87 @@ func (a *ArgumentStruct) fieldsFunc(val reflect.Value, offset int, f func(fieldN
 		}
 	}
 	return nil
+}
+
+func getArgumentStructFieldMinArgCount(typ reflect.Type) int {
+	typ2 := typ
+	isPtr := typ2.Kind() == reflect.Ptr
+	if isPtr {
+		typ2 = typ2.Elem()
+	}
+	switch typ2.Kind() {
+	case reflect.Array:
+		return typ2.Len()
+	case reflect.Slice:
+		return 1
+	default:
+		return 1
+	}
+}
+
+type ArgumentStructField struct {
+	Name        string
+	Optional    bool
+	MinArgCount int
+	Variadic    bool
+}
+
+type ArgumentStructFields []ArgumentStructField
+
+func (a ArgumentStructFields) String() string {
+	result := ""
+	idx := 0
+
+	str := ""
+	for _, field := range a[idx:] {
+		if field.Optional {
+			break
+		}
+		idx++
+		if str != "" {
+			str += " "
+		}
+		vari := ""
+		if field.Variadic {
+			vari = "..."
+		}
+		if field.MinArgCount <= 1 {
+			str += fmt.Sprintf("<%s>%s", field.Name, vari)
+		} else {
+			for i := 0; i < field.MinArgCount; i++ {
+				str += fmt.Sprintf("<%s-%d>", field.Name, i)
+			}
+		}
+	}
+	result += str
+
+	str = ""
+	k := 0
+	for _, field := range a[idx:] {
+		if str != "" {
+			str += " "
+		}
+		vari := ""
+		if field.Variadic {
+			vari = "..."
+		}
+		str += "["
+		if field.MinArgCount <= 1 {
+			str += fmt.Sprintf("<%s>%s", field.Name, vari)
+		} else {
+			for i := 0; i < field.MinArgCount; i++ {
+				str += fmt.Sprintf("<%s-%d>", field.Name, i)
+			}
+		}
+		k++
+	}
+	for i := 0; i < k; i++ {
+		str += "]"
+	}
+	if result != "" {
+		result += " "
+	}
+	result += str
+
+	return result
 }
