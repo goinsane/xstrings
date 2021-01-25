@@ -8,11 +8,12 @@ import (
 )
 
 type ArgumentStruct struct {
-	Unmarshaler  *Unmarshaler
-	StructTagKey string
-	FieldOffset  int
-	ArgCountMin  int
-	ArgCountMax  int
+	Unmarshaler   *Unmarshaler
+	StructTagKey  string
+	FieldNameFold bool
+	FieldOffset   int
+	ArgCountMin   int
+	ArgCountMax   int
 }
 
 func (a *ArgumentStruct) Unmarshal(ifc interface{}, args ...string) error {
@@ -92,6 +93,24 @@ func (a *ArgumentStruct) FieldsByValue(val reflect.Value) (ArgumentStructFields,
 	if err != nil {
 		return nil, err
 	}
+	return result, nil
+}
+
+func (a *ArgumentStruct) GetField(ifc interface{}, name string) (interface{}, error) {
+	fieldVal, err := a.GetFieldByValue(reflect.ValueOf(ifc), name)
+	if err != nil {
+		return nil, err
+	}
+	return fieldVal.Interface(), nil
+}
+
+func (a *ArgumentStruct) GetFieldByValue(val reflect.Value, name string) (reflect.Value, error) {
+	fieldVal, err := a.find(val, name)
+	if err != nil {
+		return reflect.Value{}, err
+	}
+	result := reflect.New(fieldVal.Type()).Elem()
+	result.Set(fieldVal)
 	return result, nil
 }
 
@@ -190,7 +209,13 @@ func (a *ArgumentStruct) find(val reflect.Value, name string) (reflect.Value, er
 	var result reflect.Value
 
 	err := a.fieldsFunc(val, func(fieldName string, fieldVal reflect.Value) bool {
-		if fieldName == name {
+		var ok bool
+		if a.FieldNameFold {
+			ok = strings.EqualFold(fieldName, name)
+		} else {
+			ok = fieldName == name
+		}
+		if ok {
 			result = fieldVal
 			return true
 		}
