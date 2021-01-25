@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"reflect"
 	"strings"
+	"unicode"
 )
 
 type StructArgs struct {
@@ -44,19 +45,20 @@ func (s *StructArgs) UnmarshalByValue(val reflect.Value, offset, countMin, count
 	}
 
 	for i, j, k := offset, 0, typ.NumField(); i < k; i++ {
-		var fieldName string
 		sf := typ.Field(i)
+		fieldName := sf.Name
+		if fieldName == "" || !unicode.IsUpper([]rune(fieldName)[0]) {
+			continue
+		}
+		fieldName = ToLowerBeginning(fieldName)
 		if s.StructTagKey != "" {
 			fieldName = sf.Tag.Get(s.StructTagKey)
 			if idx := strings.Index(fieldName, ","); idx >= 0 {
 				fieldName = fieldName[:idx]
 			}
-			if fieldName == "-" {
+			if fieldName == "" || fieldName == "-" {
 				continue
 			}
-		}
-		if fieldName == "" {
-			fieldName = ToLowerBeginning(sf.Name)
 		}
 
 		if j >= sizeArgs {
@@ -152,7 +154,7 @@ func (s *StructArgs) setFieldVal(val reflect.Value, name string, values ...strin
 	switch typ2.Kind() {
 	case reflect.Array:
 		if sizeValues > typ2.Len() {
-			return 0, fmt.Errorf("value count of field <%s> must be less or equal to %d", name, typ2.Len())
+			return 0, fmt.Errorf("value count of <%s> must be less or equal to %d", name, typ2.Len())
 		}
 		if isPtr {
 			if sizeValues != typ2.Len() {
@@ -211,26 +213,27 @@ func (s *StructArgs) find(val reflect.Value, offset int, name string) (reflect.V
 	}
 
 	for i, _, k := offset, 0, typ.NumField(); i < k; i++ {
-		var argName string
 		sf := typ.Field(i)
+		fieldName := sf.Name
+		if fieldName == "" || !unicode.IsUpper([]rune(fieldName)[0]) {
+			continue
+		}
+		fieldName = ToLowerBeginning(fieldName)
 		if s.StructTagKey != "" {
-			argName = sf.Tag.Get(s.StructTagKey)
-			if idx := strings.Index(argName, ","); idx >= 0 {
-				argName = argName[:idx]
+			fieldName = sf.Tag.Get(s.StructTagKey)
+			if idx := strings.Index(fieldName, ","); idx >= 0 {
+				fieldName = fieldName[:idx]
 			}
-			if argName == "-" {
+			if fieldName == "" || fieldName == "-" {
 				continue
 			}
 		}
-		if argName == "" {
-			argName = ToLowerBeginning(sf.Name)
-		}
 
-		if argName == name {
+		if fieldName == name {
 			return val.Field(i), nil
 		}
 
 	}
 
-	return reflect.Value{}, nil
+	return reflect.Value{}, ErrFieldNotFound
 }

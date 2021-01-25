@@ -101,4 +101,5 @@ var (
 	ErrNilPointer            = errors.New("nil pointer error")
 	ErrValueMustBeStruct     = errors.New("value must be struct")
 	ErrArgumentCountExceeded = errors.New("argument count exceeded")
+	ErrFieldNotFound         = errors.New("field not found")
 )
