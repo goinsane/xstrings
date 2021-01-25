@@ -313,7 +313,7 @@ func (a ArgumentStructFields) String() string {
 				if i > 0 {
 					str += " "
 				}
-				str += fmt.Sprintf("<%s-%d>", field.Name, i)
+				str += fmt.Sprintf("<%s-%d>", field.Name, i+1)
 			}
 		}
 	}
@@ -337,7 +337,7 @@ func (a ArgumentStructFields) String() string {
 				if i > 0 {
 					str += " "
 				}
-				str += fmt.Sprintf("<%s-%d>", field.Name, i)
+				str += fmt.Sprintf("<%s-%d>", field.Name, i+1)
 			}
 		}
 		k++
