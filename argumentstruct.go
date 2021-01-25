@@ -96,36 +96,47 @@ func (a *ArgumentStruct) FieldsByValue(val reflect.Value) (ArgumentStructFields,
 	return result, nil
 }
 
-func (a *ArgumentStruct) GetField(ifc interface{}, name string) (interface{}, error) {
-	fieldVal, err := a.GetFieldByValue(reflect.ValueOf(ifc), name)
+func (a *ArgumentStruct) GetField(ifc interface{}, name string) (interface{}, string, error) {
+	fieldVal, name, err := a.GetFieldByValue(reflect.ValueOf(ifc), name)
 	if err != nil {
-		return nil, err
+		return nil, name, err
 	}
-	return fieldVal.Interface(), nil
+	return fieldVal.Interface(), name, nil
 }
 
-func (a *ArgumentStruct) GetFieldByValue(val reflect.Value, name string) (reflect.Value, error) {
-	fieldVal, err := a.find(val, name)
+func (a *ArgumentStruct) GetFieldByValue(val reflect.Value, name string) (reflect.Value, string, error) {
+	fieldVal, name, err := a.find(val, name)
 	if err != nil {
-		return reflect.Value{}, err
+		return reflect.Value{}, name, err
 	}
+
 	result := reflect.New(fieldVal.Type()).Elem()
 	result.Set(fieldVal)
-	return result, nil
+	return result, name, nil
 }
 
-func (a *ArgumentStruct) SetField(ifc interface{}, name string, values ...string) error {
-	return a.SetFieldByValue(reflect.ValueOf(ifc), name, values...)
-}
-
-func (a *ArgumentStruct) SetFieldByValue(val reflect.Value, name string, values ...string) error {
-	fieldVal, err := a.find(val, name)
+func (a *ArgumentStruct) SetField(ifc interface{}, name string, values ...string) (interface{}, string, error) {
+	fieldVal, name, err := a.SetFieldByValue(reflect.ValueOf(ifc), name, values...)
 	if err != nil {
-		return err
+		return nil, name, err
+	}
+	return fieldVal.Interface(), name, err
+}
+
+func (a *ArgumentStruct) SetFieldByValue(val reflect.Value, name string, values ...string) (reflect.Value, string, error) {
+	fieldVal, name, err := a.find(val, name)
+	if err != nil {
+		return reflect.Value{}, name, err
 	}
 
 	_, err = a.setFieldVal(fieldVal, name, values...)
-	return err
+	if err != nil {
+		return reflect.Value{}, name, err
+	}
+
+	result := reflect.New(fieldVal.Type()).Elem()
+	result.Set(fieldVal)
+	return result, name, nil
 }
 
 func (a *ArgumentStruct) setFieldVal(val reflect.Value, name string, values ...string) (count int, err error) {
@@ -205,7 +216,7 @@ func (a *ArgumentStruct) setFieldVal(val reflect.Value, name string, values ...s
 	return count, nil
 }
 
-func (a *ArgumentStruct) find(val reflect.Value, name string) (reflect.Value, error) {
+func (a *ArgumentStruct) find(val reflect.Value, name string) (reflect.Value, string, error) {
 	var result reflect.Value
 
 	err := a.fieldsFunc(val, func(fieldName string, fieldVal reflect.Value) bool {
@@ -217,19 +228,20 @@ func (a *ArgumentStruct) find(val reflect.Value, name string) (reflect.Value, er
 		}
 		if ok {
 			result = fieldVal
+			name = fieldName
 			return true
 		}
 		return false
 	})
 	if err != nil {
-		return reflect.Value{}, err
+		return reflect.Value{}, name, err
 	}
 
 	if result.IsValid() {
-		return result, nil
+		return result, name, nil
 	}
 
-	return reflect.Value{}, ErrArgumentStructFieldNotFound
+	return reflect.Value{}, name, ErrArgumentStructFieldNotFound
 }
 
 func (a *ArgumentStruct) fieldsFunc(val reflect.Value, f func(fieldName string, fieldVal reflect.Value) bool) error {
