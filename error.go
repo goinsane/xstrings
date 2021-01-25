@@ -97,9 +97,9 @@ func (e *ArgumentParseError) ArgName() string {
 }
 
 var (
-	ErrCanNotGetAddr         = errors.New("can not get address of value")
-	ErrNilPointer            = errors.New("nil pointer error")
-	ErrValueMustBeStruct     = errors.New("value must be struct")
-	ErrArgumentCountExceeded = errors.New("argument count exceeded")
-	ErrFieldNotFound         = errors.New("field not found")
+	ErrCanNotGetAddr               = errors.New("can not get address of value")
+	ErrNilPointer                  = errors.New("nil pointer error")
+	ErrValueMustBeStruct           = errors.New("value must be struct")
+	ErrArgumentCountExceeded       = errors.New("argument count exceeded")
+	ErrArgumentStructFieldNotFound = errors.New("argument struct field not found")
 )

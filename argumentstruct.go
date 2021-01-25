@@ -6,16 +6,16 @@ import (
 	"unicode"
 )
 
-type StructArgs struct {
+type ArgumentStruct struct {
 	Unmarshaler  *Unmarshaler
 	StructTagKey string
 }
 
-func (s *StructArgs) Unmarshal(ifc interface{}, offset, countMin, countMax int, args ...string) error {
-	return s.UnmarshalByValue(reflect.ValueOf(ifc), offset, countMin, countMax, args...)
+func (a *ArgumentStruct) Unmarshal(ifc interface{}, offset, countMin, countMax int, args ...string) error {
+	return a.UnmarshalByValue(reflect.ValueOf(ifc), offset, countMin, countMax, args...)
 }
 
-func (s *StructArgs) UnmarshalByValue(val reflect.Value, offset, countMin, countMax int, args ...string) error {
+func (a *ArgumentStruct) UnmarshalByValue(val reflect.Value, offset, countMin, countMax int, args ...string) error {
 	if val.Type().Kind() != reflect.Ptr {
 		if !val.CanAddr() {
 			return ErrCanNotGetAddr
@@ -50,8 +50,8 @@ func (s *StructArgs) UnmarshalByValue(val reflect.Value, offset, countMin, count
 			continue
 		}
 		fieldName = ToLowerBeginning(fieldName)
-		if s.StructTagKey != "" {
-			fieldName = sf.Tag.Get(s.StructTagKey)
+		if a.StructTagKey != "" {
+			fieldName = sf.Tag.Get(a.StructTagKey)
 			if idx := strings.Index(fieldName, ","); idx >= 0 {
 				fieldName = fieldName[:idx]
 			}
@@ -82,7 +82,7 @@ func (s *StructArgs) UnmarshalByValue(val reflect.Value, offset, countMin, count
 		}
 
 		if f := val.Field(i); f.CanSet() {
-			count, err := s.setFieldVal(f, fieldName, args[j:]...)
+			count, err := a.setFieldVal(f, fieldName, args[j:]...)
 			if err != nil {
 				return err
 			}
@@ -94,26 +94,26 @@ func (s *StructArgs) UnmarshalByValue(val reflect.Value, offset, countMin, count
 	return nil
 }
 
-func (s *StructArgs) SetField(ifc interface{}, offset int, name string, values ...string) error {
-	return s.SetFieldByValue(reflect.ValueOf(ifc), offset, name, values...)
+func (a *ArgumentStruct) SetField(ifc interface{}, offset int, name string, values ...string) error {
+	return a.SetFieldByValue(reflect.ValueOf(ifc), offset, name, values...)
 }
 
-func (s *StructArgs) SetFieldByValue(val reflect.Value, offset int, name string, values ...string) error {
-	fieldVal, err := s.find(val, offset, name)
+func (a *ArgumentStruct) SetFieldByValue(val reflect.Value, offset int, name string, values ...string) error {
+	fieldVal, err := a.find(val, offset, name)
 	if err != nil {
 		return err
 	}
 
 	if fieldVal.CanSet() {
-		_, err = s.setFieldVal(fieldVal, name, values...)
+		_, err = a.setFieldVal(fieldVal, name, values...)
 		return err
 	}
 
 	return nil
 }
 
-func (s *StructArgs) setFieldVal(val reflect.Value, name string, values ...string) (count int, err error) {
-	unmarshaler := s.Unmarshaler
+func (a *ArgumentStruct) setFieldVal(val reflect.Value, name string, values ...string) (count int, err error) {
+	unmarshaler := a.Unmarshaler
 	if unmarshaler == nil {
 		unmarshaler = DefaultUnmarshaler
 	}
@@ -188,7 +188,7 @@ func (s *StructArgs) setFieldVal(val reflect.Value, name string, values ...strin
 	return count, nil
 }
 
-func (s *StructArgs) find(val reflect.Value, offset int, name string) (reflect.Value, error) {
+func (a *ArgumentStruct) find(val reflect.Value, offset int, name string) (reflect.Value, error) {
 	if val.Type().Kind() != reflect.Ptr {
 		if !val.CanAddr() {
 			return reflect.Value{}, ErrCanNotGetAddr
@@ -218,8 +218,8 @@ func (s *StructArgs) find(val reflect.Value, offset int, name string) (reflect.V
 			continue
 		}
 		fieldName = ToLowerBeginning(fieldName)
-		if s.StructTagKey != "" {
-			fieldName = sf.Tag.Get(s.StructTagKey)
+		if a.StructTagKey != "" {
+			fieldName = sf.Tag.Get(a.StructTagKey)
 			if idx := strings.Index(fieldName, ","); idx >= 0 {
 				fieldName = fieldName[:idx]
 			}
@@ -234,5 +234,5 @@ func (s *StructArgs) find(val reflect.Value, offset int, name string) (reflect.V
 
 	}
 
-	return reflect.Value{}, ErrFieldNotFound
+	return reflect.Value{}, ErrArgumentStructFieldNotFound
 }
