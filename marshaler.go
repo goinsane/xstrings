@@ -25,13 +25,14 @@ type Marshaler struct {
 	Prefix string
 	Indent string
 
-	FuncFormatBool    func(v bool) string
-	FuncFormatInt     func(v int64) string
-	FuncFormatUint    func(v uint64) string
-	FuncFormatFloat   func(v float64) string
-	FuncFormatComplex func(v complex128) string
-	FuncFormatTime    func(v time.Time) string
-	FuncMarshalData   func(v interface{}) (string, error)
+	FuncFormatBool     func(v bool) string
+	FuncFormatInt      func(v int64) string
+	FuncFormatUint     func(v uint64) string
+	FuncFormatFloat    func(v float64) string
+	FuncFormatComplex  func(v complex128) string
+	FuncFormatTime     func(v time.Time) string
+	FuncFormatDuration func(v time.Duration) string
+	FuncMarshalData    func(v interface{}) (string, error)
 }
 
 func NewMarshaler() *Marshaler {
@@ -102,6 +103,15 @@ func (m *Marshaler) MarshalByValue(val reflect.Value) (string, error) {
 			str = m.FuncFormatTime(t)
 		} else {
 			str = t.Format(timeLayout)
+		}
+		return str, nil
+	}
+
+	if t, ok := ifc.(time.Duration); ok {
+		if m.FuncFormatDuration != nil {
+			str = m.FuncFormatDuration(t)
+		} else {
+			str = t.String()
 		}
 		return str, nil
 	}
