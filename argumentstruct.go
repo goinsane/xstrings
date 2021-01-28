@@ -8,12 +8,13 @@ import (
 )
 
 type ArgumentStruct struct {
-	Unmarshaler   *Unmarshaler
-	StructTagKey  string
-	FieldNameFold bool
-	FieldOffset   int
-	ArgCountMin   int
-	ArgCountMax   int
+	Unmarshaler              *Unmarshaler
+	FieldNameBeginsLowerCase bool
+	FieldNameFold            bool
+	StructTagKey             string
+	FieldOffset              int
+	ArgCountMin              int
+	ArgCountMax              int
 }
 
 func (a *ArgumentStruct) Unmarshal(ifc interface{}, args ...string) error {
@@ -288,7 +289,9 @@ func (a *ArgumentStruct) fieldsFunc(val reflect.Value, readOnly bool, f func(fie
 		if fieldName == "" || !unicode.IsUpper([]rune(fieldName)[0]) {
 			continue
 		}
-		fieldName = ToLowerBeginning(fieldName)
+		if a.FieldNameBeginsLowerCase {
+			fieldName = ToLowerBeginning(fieldName)
+		}
 		if a.StructTagKey != "" {
 			fieldName = sf.Tag.Get(a.StructTagKey)
 			if idx := strings.Index(fieldName, ","); idx >= 0 {
