@@ -28,7 +28,7 @@ func (a *ArgumentStruct) UnmarshalByValue(val reflect.Value, args ...string) err
 
 	var err error
 	argIdx := 0
-	e := a.fieldsFunc(val, func(fieldName string, fieldVal reflect.Value) bool {
+	e := a.fieldsFunc(val, false, func(fieldName string, fieldVal reflect.Value) bool {
 		fieldMinArgCount := getArgumentStructFieldMinArgCount(fieldVal.Type())
 		if lastArgIdx := argIdx + fieldMinArgCount; lastArgIdx > sizeArgs {
 			if argIdx < sizeArgs {
@@ -70,7 +70,7 @@ func (a *ArgumentStruct) Fields(ifc interface{}) (ArgumentStructFields, error) {
 func (a *ArgumentStruct) FieldsByValue(val reflect.Value) (ArgumentStructFields, error) {
 	result := make(ArgumentStructFields, 0, 1024)
 	argIdx := 0
-	err := a.fieldsFunc(val, func(fieldName string, fieldVal reflect.Value) bool {
+	err := a.fieldsFunc(val, true, func(fieldName string, fieldVal reflect.Value) bool {
 		if a.ArgCountMax > 0 && a.ArgCountMax <= argIdx {
 			return true
 		}
@@ -219,7 +219,7 @@ func (a *ArgumentStruct) setFieldVal(val reflect.Value, name string, values ...s
 func (a *ArgumentStruct) find(val reflect.Value, name string) (reflect.Value, string, error) {
 	var result reflect.Value
 
-	err := a.fieldsFunc(val, func(fieldName string, fieldVal reflect.Value) bool {
+	err := a.fieldsFunc(val, true, func(fieldName string, fieldVal reflect.Value) bool {
 		var ok bool
 		if a.FieldNameFold {
 			ok = strings.EqualFold(fieldName, name)
@@ -244,7 +244,7 @@ func (a *ArgumentStruct) find(val reflect.Value, name string) (reflect.Value, st
 	return reflect.Value{}, name, ErrArgumentStructFieldNotFound
 }
 
-func (a *ArgumentStruct) fieldsFunc(val reflect.Value, f func(fieldName string, fieldVal reflect.Value) bool) error {
+func (a *ArgumentStruct) fieldsFunc(val reflect.Value, readOnly bool, f func(fieldName string, fieldVal reflect.Value) bool) error {
 	if val.Type().Kind() != reflect.Ptr {
 		if !val.CanAddr() {
 			return ErrCanNotGetAddr
@@ -270,6 +270,20 @@ func (a *ArgumentStruct) fieldsFunc(val reflect.Value, f func(fieldName string, 
 
 	for i, j := offset, typ.NumField(); i < j; i++ {
 		sf := typ.Field(i)
+		if sf.Anonymous {
+			fieldVal := val.Field(i)
+			isNil := sf.Type.Kind() == reflect.Ptr && fieldVal.IsNil()
+			if isNil {
+				fieldVal = reflect.New(sf.Type.Elem())
+			}
+			if err := a.fieldsFunc(fieldVal, readOnly, f); err != nil {
+				return err
+			}
+			if isNil && !readOnly {
+				val.Field(i).Set(fieldVal)
+			}
+			continue
+		}
 		fieldName := sf.Name
 		if fieldName == "" || !unicode.IsUpper([]rune(fieldName)[0]) {
 			continue
