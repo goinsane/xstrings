@@ -293,12 +293,15 @@ func (a *ArgumentStruct) fieldsFunc(val reflect.Value, readOnly bool, f func(fie
 			fieldName = ToLowerBeginning(fieldName)
 		}
 		if a.FieldTagKey != "" {
-			fieldName = sf.Tag.Get(a.FieldTagKey)
-			if idx := strings.Index(fieldName, ","); idx >= 0 {
-				fieldName = fieldName[:idx]
+			fieldTagFieldName := sf.Tag.Get(a.FieldTagKey)
+			if idx := strings.Index(fieldTagFieldName, ","); idx >= 0 {
+				fieldTagFieldName = fieldTagFieldName[:idx]
 			}
-			if fieldName == "" || fieldName == "-" {
+			if fieldTagFieldName == "-" {
 				continue
+			}
+			if fieldTagFieldName != "" {
+				fieldName = fieldTagFieldName
 			}
 		}
 
