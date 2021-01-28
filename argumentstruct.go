@@ -106,7 +106,7 @@ func (a *ArgumentStruct) GetField(ifc interface{}, name string) (interface{}, st
 }
 
 func (a *ArgumentStruct) GetFieldByValue(val reflect.Value, name string) (reflect.Value, string, error) {
-	fieldVal, name, err := a.find(val, name)
+	fieldVal, name, err := a.find(val, true, name)
 	if err != nil {
 		return reflect.Value{}, name, err
 	}
@@ -125,7 +125,7 @@ func (a *ArgumentStruct) SetField(ifc interface{}, name string, values ...string
 }
 
 func (a *ArgumentStruct) SetFieldByValue(val reflect.Value, name string, values ...string) (reflect.Value, string, error) {
-	fieldVal, name, err := a.find(val, name)
+	fieldVal, name, err := a.find(val, false, name)
 	if err != nil {
 		return reflect.Value{}, name, err
 	}
@@ -217,10 +217,10 @@ func (a *ArgumentStruct) setFieldVal(val reflect.Value, name string, values ...s
 	return count, nil
 }
 
-func (a *ArgumentStruct) find(val reflect.Value, name string) (reflect.Value, string, error) {
+func (a *ArgumentStruct) find(val reflect.Value, readOnly bool, name string) (reflect.Value, string, error) {
 	var result reflect.Value
 
-	err := a.fieldsFunc(val, true, func(fieldName string, fieldVal reflect.Value) bool {
+	err := a.fieldsFunc(val, readOnly, func(fieldName string, fieldVal reflect.Value) bool {
 		var ok bool
 		if a.FieldNameFold {
 			ok = strings.EqualFold(fieldName, name)
@@ -228,8 +228,8 @@ func (a *ArgumentStruct) find(val reflect.Value, name string) (reflect.Value, st
 			ok = fieldName == name
 		}
 		if ok {
-			result = fieldVal
 			name = fieldName
+			result = fieldVal
 			return true
 		}
 		return false
@@ -271,7 +271,7 @@ func (a *ArgumentStruct) fieldsFunc(val reflect.Value, readOnly bool, f func(fie
 
 	for i, j := offset, typ.NumField(); i < j; i++ {
 		sf := typ.Field(i)
-		if sf.Anonymous {
+		if sf.Anonymous && (sf.Type.Kind() == reflect.Struct || (sf.Type.Kind() == reflect.Ptr && sf.Type.Elem().Kind() == reflect.Struct)) {
 			fieldVal := val.Field(i)
 			isNil := sf.Type.Kind() == reflect.Ptr && fieldVal.IsNil()
 			if isNil {
@@ -293,12 +293,15 @@ func (a *ArgumentStruct) fieldsFunc(val reflect.Value, readOnly bool, f func(fie
 			fieldName = ToLowerBeginning(fieldName)
 		}
 		if a.FieldTagKey != "" {
-			fieldName = sf.Tag.Get(a.FieldTagKey)
-			if idx := strings.Index(fieldName, ","); idx >= 0 {
-				fieldName = fieldName[:idx]
+			fieldTagFieldName := sf.Tag.Get(a.FieldTagKey)
+			if idx := strings.Index(fieldTagFieldName, ","); idx >= 0 {
+				fieldTagFieldName = fieldTagFieldName[:idx]
 			}
-			if fieldName == "" || fieldName == "-" {
+			if fieldTagFieldName == "-" {
 				continue
+			}
+			if fieldTagFieldName != "" {
+				fieldName = fieldTagFieldName
 			}
 		}
 
