@@ -11,7 +11,7 @@ type ArgumentStruct struct {
 	Unmarshaler              *Unmarshaler
 	FieldNameBeginsLowerCase bool
 	FieldNameFold            bool
-	StructTagKey             string
+	FieldTagKey              string
 	FieldOffset              int
 	ArgCountMin              int
 	ArgCountMax              int
@@ -292,8 +292,8 @@ func (a *ArgumentStruct) fieldsFunc(val reflect.Value, readOnly bool, f func(fie
 		if a.FieldNameBeginsLowerCase {
 			fieldName = ToLowerBeginning(fieldName)
 		}
-		if a.StructTagKey != "" {
-			fieldName = sf.Tag.Get(a.StructTagKey)
+		if a.FieldTagKey != "" {
+			fieldName = sf.Tag.Get(a.FieldTagKey)
 			if idx := strings.Index(fieldName, ","); idx >= 0 {
 				fieldName = fieldName[:idx]
 			}
