@@ -169,7 +169,7 @@ func (a *ArgumentStruct) setFieldVal(val reflect.Value, name string, values ...s
 		for i := 0; i < sizeValues; i++ {
 			v, err := unmarshaler.ParseToValue(values[i], typ2.Elem())
 			if err != nil {
-				return 0, &ArgumentParseError{name, err}
+				return 0, &ArgumentParseError{name, err.(*ParseError).Unwrap()}
 			}
 			av.Index(i).Set(v)
 		}
@@ -208,7 +208,7 @@ func (a *ArgumentStruct) setFieldVal(val reflect.Value, name string, values ...s
 	default:
 		v, err := unmarshaler.ParseToValue(values[0], typ)
 		if err != nil {
-			return 0, &ArgumentParseError{name, err}
+			return 0, &ArgumentParseError{name, err.(*ParseError).Unwrap()}
 		}
 		val.Set(v)
 
@@ -271,16 +271,21 @@ func (a *ArgumentStruct) fieldsFunc(val reflect.Value, readOnly bool, f func(fie
 
 	for i, j := offset, typ.NumField(); i < j; i++ {
 		sf := typ.Field(i)
-		if sf.Anonymous && (sf.Type.Kind() == reflect.Struct || (sf.Type.Kind() == reflect.Ptr && sf.Type.Elem().Kind() == reflect.Struct)) {
-			fieldVal := val.Field(i)
-			isNil := sf.Type.Kind() == reflect.Ptr && fieldVal.IsNil()
-			if isNil {
+		fieldVal := val.Field(i)
+		if sf.Anonymous && (sf.Type.Kind() == reflect.Struct ||
+			(sf.Type.Kind() == reflect.Ptr && sf.Type.Elem().Kind() == reflect.Struct) ||
+			sf.Type.Kind() == reflect.Interface && !fieldVal.IsNil() && fieldVal.Elem().Type().Kind() == reflect.Ptr) {
+			isPtrNil := sf.Type.Kind() == reflect.Ptr && fieldVal.IsNil()
+			if isPtrNil {
 				fieldVal = reflect.New(sf.Type.Elem())
+			}
+			if sf.Type.Kind() == reflect.Interface {
+				fieldVal = fieldVal.Elem()
 			}
 			if err := a.fieldsFunc(fieldVal, readOnly, f); err != nil {
 				return err
 			}
-			if isNil && !readOnly {
+			if isPtrNil && !readOnly {
 				val.Field(i).Set(fieldVal)
 			}
 			continue
@@ -305,7 +310,7 @@ func (a *ArgumentStruct) fieldsFunc(val reflect.Value, readOnly bool, f func(fie
 			}
 		}
 
-		fieldVal := val.Field(i)
+		//fieldVal := val.Field(i)
 		if !fieldVal.CanSet() {
 			continue
 		}
