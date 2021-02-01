@@ -22,8 +22,8 @@ type Marshaler struct {
 	ComplexFmt  byte
 	ComplexPrec int
 
-	Prefix string
-	Indent string
+	Indent          string
+	MultiLinePrefix string
 
 	FuncFormatBool     func(v bool) string
 	FuncFormatInt      func(v int64) string
@@ -78,14 +78,14 @@ func (m *Marshaler) MarshalByValue(val reflect.Value) (string, error) {
 		complexPrec = DefaultComplexPrec
 	}
 
-	prefix := m.Prefix
-	if prefix == "" {
-		prefix = DefaultPrefix
-	}
-
 	indent := m.Indent
 	if indent == "" {
 		indent = DefaultIndent
+	}
+
+	multiLinePrefix := m.MultiLinePrefix
+	if multiLinePrefix == "" {
+		multiLinePrefix = DefaultMultiLinePrefix
 	}
 
 	typ := val.Type()
@@ -190,15 +190,11 @@ func (m *Marshaler) MarshalByValue(val reflect.Value) (string, error) {
 		tryFmtPrint = true
 	}
 
+	kind := typ.Kind()
 	if tryFmtPrint {
-		return fmt.Sprintf("%s%v", prefix, ifc), nil
+		kind = reflect.Invalid
 	}
-
-	if err != nil {
-		return "", newFormatError(err)
-	}
-
-	switch typ.Kind() {
+	switch kind {
 	case reflect.Bool:
 		if m.FuncFormatBool != nil {
 			str = m.FuncFormatBool(boolVal)
@@ -289,6 +285,9 @@ func (m *Marshaler) MarshalByValue(val reflect.Value) (string, error) {
 			str = string(data)
 		}
 
+	case reflect.Invalid:
+		fallthrough
+
 	default:
 		tryFmtPrint = true
 
@@ -306,8 +305,10 @@ func (m *Marshaler) MarshalByValue(val reflect.Value) (string, error) {
 	newStr := ""
 	for idx, line := range strings.Split(str, "\n") {
 		nl := ""
+		prefix := ""
 		if idx > 0 {
 			nl = "\n"
+			prefix = multiLinePrefix
 		}
 		newStr += nl + prefix + line
 	}
