@@ -274,7 +274,7 @@ func (a *ArgumentStruct) fieldsFunc(val reflect.Value, readOnly bool, f func(fie
 		fieldVal := val.Field(i)
 		if sf.Anonymous && (sf.Type.Kind() == reflect.Struct ||
 			(sf.Type.Kind() == reflect.Ptr && sf.Type.Elem().Kind() == reflect.Struct) ||
-			sf.Type.Kind() == reflect.Interface && !fieldVal.IsNil() && fieldVal.Elem().Type().Kind() == reflect.Ptr) {
+			(sf.Type.Kind() == reflect.Interface && !fieldVal.IsNil() && fieldVal.Elem().Type().Kind() == reflect.Ptr)) {
 			isPtrNil := sf.Type.Kind() == reflect.Ptr && fieldVal.IsNil()
 			if isPtrNil {
 				fieldVal = reflect.New(sf.Type.Elem())
@@ -310,7 +310,6 @@ func (a *ArgumentStruct) fieldsFunc(val reflect.Value, readOnly bool, f func(fie
 			}
 		}
 
-		//fieldVal := val.Field(i)
 		if !fieldVal.CanSet() {
 			continue
 		}
