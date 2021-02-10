@@ -105,16 +105,16 @@ func (u *Unmarshaler) UnmarshalByValue(str string, val reflect.Value) (err error
 		return nil
 	}
 
-	if t, ok := ifc.(*error); ok {
-		*t = errors.New(str)
-		return nil
-	}
-
 	if t, ok := ifc.(encoding.TextUnmarshaler); ok {
 		err = t.UnmarshalText([]byte(str))
 		if err != nil {
 			return newParseError(err)
 		}
+		return nil
+	}
+
+	if t, ok := ifc.(*error); ok {
+		*t = errors.New(str)
 		return nil
 	}
 
