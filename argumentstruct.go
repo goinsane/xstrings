@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"reflect"
 	"strings"
-	"unicode"
 )
 
 type ArgumentStruct struct {
@@ -272,28 +271,29 @@ func (a *ArgumentStruct) fieldsFunc(val reflect.Value, readOnly bool, f func(fie
 	for i, j := offset, typ.NumField(); i < j; i++ {
 		sf := typ.Field(i)
 		fieldVal := val.Field(i)
+		if !fieldVal.CanSet() {
+			continue
+		}
 		if sf.Anonymous && (sf.Type.Kind() == reflect.Struct ||
 			(sf.Type.Kind() == reflect.Ptr && sf.Type.Elem().Kind() == reflect.Struct) ||
 			(sf.Type.Kind() == reflect.Interface && !fieldVal.IsNil() && fieldVal.Elem().Type().Kind() == reflect.Ptr)) {
+			curFieldVal := fieldVal
 			isPtrNil := sf.Type.Kind() == reflect.Ptr && fieldVal.IsNil()
 			if isPtrNil {
-				fieldVal = reflect.New(sf.Type.Elem())
+				curFieldVal = reflect.New(sf.Type.Elem())
 			}
 			if sf.Type.Kind() == reflect.Interface {
-				fieldVal = fieldVal.Elem()
+				curFieldVal = fieldVal.Elem()
 			}
-			if err := a.fieldsFunc(fieldVal, readOnly, f); err != nil {
+			if err := a.fieldsFunc(curFieldVal, readOnly, f); err != nil {
 				return err
 			}
 			if isPtrNil && !readOnly {
-				val.Field(i).Set(fieldVal)
+				fieldVal.Set(curFieldVal)
 			}
 			continue
 		}
 		fieldName := sf.Name
-		if fieldName == "" || !unicode.IsUpper([]rune(fieldName)[0]) {
-			continue
-		}
 		if a.FieldNameBeginsLowerCase {
 			fieldName = ToLowerBeginning(fieldName)
 		}
@@ -308,10 +308,6 @@ func (a *ArgumentStruct) fieldsFunc(val reflect.Value, readOnly bool, f func(fie
 			if fieldTagFieldName != "" {
 				fieldName = fieldTagFieldName
 			}
-		}
-
-		if !fieldVal.CanSet() {
-			continue
 		}
 
 		if f(fieldName, fieldVal) {
