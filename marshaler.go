@@ -116,14 +116,6 @@ func (m *Marshaler) MarshalByValue(val reflect.Value) (string, error) {
 		return str, nil
 	}
 
-	if t, ok := ifc.(fmt.Stringer); ok {
-		return t.String(), nil
-	}
-
-	if t, ok := ifc.(error); ok {
-		return t.Error(), nil
-	}
-
 	if t, ok := ifc.(encoding.TextMarshaler); ok {
 		var data []byte
 		data, err = t.MarshalText()
@@ -132,6 +124,14 @@ func (m *Marshaler) MarshalByValue(val reflect.Value) (string, error) {
 		}
 		return string(data), nil
 	}
+
+	if t, ok := ifc.(error); ok {
+		return t.Error(), nil
+	}
+
+	/*if t, ok := ifc.(fmt.Stringer); ok {
+		return t.String(), nil
+	}*/
 
 	tryFmtPrint := false
 	var boolVal bool

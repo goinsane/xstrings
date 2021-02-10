@@ -30,3 +30,17 @@ func ToLowerBeginning(str string) string {
 	runes[0] = unicode.ToLower(runes[0])
 	return string(runes)
 }
+
+func IsBeginningUpper(str string) bool {
+	if str == "" {
+		return false
+	}
+	return unicode.IsUpper([]rune(str)[0])
+}
+
+func IsBeginningLower(str string) bool {
+	if str == "" {
+		return false
+	}
+	return unicode.IsLower([]rune(str)[0])
+}
