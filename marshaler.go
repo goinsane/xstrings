@@ -89,6 +89,7 @@ func (m *Marshaler) MarshalByValue(val reflect.Value) (string, error) {
 	}
 
 	typ := val.Type()
+	ifcOrig := val.Interface()
 	if typ.Kind() == reflect.Ptr {
 		if val.IsNil() {
 			return "", nil
@@ -116,7 +117,7 @@ func (m *Marshaler) MarshalByValue(val reflect.Value) (string, error) {
 		return str, nil
 	}
 
-	if t, ok := ifc.(encoding.TextMarshaler); ok {
+	if t, ok := ifcOrig.(encoding.TextMarshaler); ok {
 		var data []byte
 		data, err = t.MarshalText()
 		if err != nil {
@@ -125,11 +126,11 @@ func (m *Marshaler) MarshalByValue(val reflect.Value) (string, error) {
 		return string(data), nil
 	}
 
-	if t, ok := ifc.(error); ok {
+	if t, ok := ifcOrig.(error); ok {
 		return t.Error(), nil
 	}
 
-	/*if t, ok := ifc.(fmt.Stringer); ok {
+	/*if t, ok := ifcOrig.(fmt.Stringer); ok {
 		return t.String(), nil
 	}*/
 
@@ -184,7 +185,7 @@ func (m *Marshaler) MarshalByValue(val reflect.Value) (string, error) {
 	case reflect.Slice:
 		fallthrough
 	case reflect.Struct:
-		dataVal = ifc
+		dataVal = ifcOrig
 
 	default:
 		tryFmtPrint = true
