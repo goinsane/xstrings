@@ -278,17 +278,18 @@ func (a *ArgumentStruct) fieldsFunc(val reflect.Value, readOnly bool, f func(fie
 			(sf.Type.Kind() == reflect.Ptr && sf.Type.Elem().Kind() == reflect.Struct) ||
 			(sf.Type.Kind() == reflect.Interface && !fieldVal.IsNil() && fieldVal.Elem().Type().Kind() == reflect.Ptr)) {
 			curFieldVal := fieldVal
-			isPtrNil := sf.Type.Kind() == reflect.Ptr && fieldVal.IsNil()
-			if isPtrNil {
+			isNilPtr := false
+			switch {
+			case sf.Type.Kind() == reflect.Ptr && fieldVal.IsNil():
 				curFieldVal = reflect.New(sf.Type.Elem())
-			}
-			if sf.Type.Kind() == reflect.Interface {
+				isNilPtr = true
+			case sf.Type.Kind() == reflect.Interface:
 				curFieldVal = fieldVal.Elem()
 			}
 			if err := a.fieldsFunc(curFieldVal, readOnly, f); err != nil {
 				return err
 			}
-			if isPtrNil && !readOnly {
+			if isNilPtr && !readOnly {
 				fieldVal.Set(curFieldVal)
 			}
 			continue
