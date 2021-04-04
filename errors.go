@@ -5,6 +5,14 @@ import (
 	"fmt"
 )
 
+var (
+	ErrCanNotGetAddr               = errors.New("can not get address of value")
+	ErrNilPointer                  = errors.New("nil pointer error")
+	ErrValueMustBeStruct           = errors.New("value must be struct")
+	ErrArgumentCountExceeded       = errors.New("argument count exceeded")
+	ErrArgumentStructFieldNotFound = errors.New("argument struct field not found")
+)
+
 // ParseError is type of error
 type ParseError struct {
 	err error
@@ -59,21 +67,25 @@ func (e *FormatError) Unwrap() error {
 
 type MissingArgumentError struct {
 	name string
+	err  error
 }
 
 func (e *MissingArgumentError) Error() string {
 	str := "missing argument"
-	if e.name == "" {
+	if e.name != "" {
+		str = fmt.Sprintf("%s <%s>", str, e.name)
+	}
+	if e.err == nil || e.err.Error() == "" {
 		return str
 	}
-	return fmt.Sprintf("%s <%s>", str, e.name)
+	return fmt.Sprintf("%s: %v", str, e.err)
 }
 
 func (e *MissingArgumentError) Unwrap() error {
-	return nil
+	return e.err
 }
 
-func (e *MissingArgumentError) ArgName() string {
+func (e *MissingArgumentError) Name() string {
 	return e.name
 }
 
@@ -83,11 +95,11 @@ type ArgumentParseError struct {
 }
 
 func (e *ArgumentParseError) Error() string {
-	str := ""
+	str := "argument"
 	if e.name != "" {
-		str = fmt.Sprintf("<%s> ", e.name)
+		str = fmt.Sprintf("%s <%s>", str, e.name)
 	}
-	str = fmt.Sprintf("argument %sparse error", str)
+	str = fmt.Sprintf("%s parse error", str)
 	if e.err == nil || e.err.Error() == "" {
 		return str
 	}
@@ -98,14 +110,6 @@ func (e *ArgumentParseError) Unwrap() error {
 	return e.err
 }
 
-func (e *ArgumentParseError) ArgName() string {
+func (e *ArgumentParseError) Name() string {
 	return e.name
 }
-
-var (
-	ErrCanNotGetAddr               = errors.New("can not get address of value")
-	ErrNilPointer                  = errors.New("nil pointer error")
-	ErrValueMustBeStruct           = errors.New("value must be struct")
-	ErrArgumentCountExceeded       = errors.New("argument count exceeded")
-	ErrArgumentStructFieldNotFound = errors.New("argument struct field not found")
-)
