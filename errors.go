@@ -22,11 +22,11 @@ func newParseError(err error) error {
 
 // Error is implementation of error
 func (e *ParseError) Error() string {
-	s := "parse error"
+	str := "parse error"
 	if e.err == nil || e.err.Error() == "" {
-		return s
+		return str
 	}
-	return fmt.Sprintf("%s: %v", s, e.err)
+	return fmt.Sprintf("%s: %v", str, e.err)
 }
 
 // Unwrap returns wrapped error
