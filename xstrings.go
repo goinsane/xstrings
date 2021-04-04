@@ -44,3 +44,27 @@ func IsBeginningLower(str string) bool {
 	}
 	return unicode.IsLower([]rune(str)[0])
 }
+
+func AreLettersUpper(str string) bool {
+	for _, r := range []rune(str) {
+		if !unicode.IsLetter(r) {
+			continue
+		}
+		if !unicode.IsUpper(r) {
+			return false
+		}
+	}
+	return true
+}
+
+func AreLettersLower(str string) bool {
+	for _, r := range []rune(str) {
+		if !unicode.IsLetter(r) {
+			continue
+		}
+		if !unicode.IsLower(r) {
+			return false
+		}
+	}
+	return true
+}
