@@ -32,11 +32,11 @@ func (a *ArgumentStruct) UnmarshalByValue(val reflect.Value, args ...string) err
 		fieldMinArgCount := getArgumentStructFieldMinArgCount(fieldVal.Type())
 		if lastArgIdx := argIdx + fieldMinArgCount; lastArgIdx > sizeArgs {
 			if argIdx < sizeArgs {
-				err = &MissingArgumentError{fieldName}
+				err = &MissingArgumentError{fieldName, nil}
 				return true
 			}
 			if argIdx < a.ArgCountMin {
-				err = &MissingArgumentError{fieldName}
+				err = &MissingArgumentError{fieldName, nil}
 				return true
 			}
 			if a.ArgCountMax > 0 && a.ArgCountMax <= argIdx {
