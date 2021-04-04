@@ -22,11 +22,11 @@ func newParseError(err error) error {
 
 // Error is implementation of error
 func (e *ParseError) Error() string {
-	s := "parse error"
-	if e.err == nil {
-		return s
+	str := "parse error"
+	if e.err == nil || e.err.Error() == "" {
+		return str
 	}
-	return fmt.Sprintf("%s: %v", s, e.err)
+	return fmt.Sprintf("%s: %v", str, e.err)
 }
 
 // Unwrap returns wrapped error
@@ -51,11 +51,11 @@ func newFormatError(err error) error {
 
 // Error is implementation of error
 func (e *FormatError) Error() string {
-	s := "format error"
-	if e.err == nil {
-		return s
+	str := "format error"
+	if e.err == nil || e.err.Error() == "" {
+		return str
 	}
-	return fmt.Sprintf("%s: %v", s, e.err)
+	return fmt.Sprintf("%s: %v", str, e.err)
 }
 
 // Unwrap returns wrapped error
@@ -68,7 +68,11 @@ type MissingArgumentError struct {
 }
 
 func (e *MissingArgumentError) Error() string {
-	return fmt.Sprintf("missing argument of <%s>", e.name)
+	str := "missing argument"
+	if e.name == "" {
+		return str
+	}
+	return fmt.Sprintf("%s <%s>", str, e.name)
 }
 
 func (e *MissingArgumentError) Unwrap() error {
@@ -85,7 +89,15 @@ type ArgumentParseError struct {
 }
 
 func (e *ArgumentParseError) Error() string {
-	return fmt.Sprintf("argument of <%s> parse error: %v", e.name, e.err)
+	str := ""
+	if e.name != "" {
+		str = fmt.Sprintf("<%s> ", e.name)
+	}
+	str = fmt.Sprintf("argument %sparse error", str)
+	if e.err == nil || e.err.Error() == "" {
+		return str
+	}
+	return fmt.Sprintf("%s: %v", str, e.err)
 }
 
 func (e *ArgumentParseError) Unwrap() error {
