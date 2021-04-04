@@ -12,9 +12,6 @@ type ParseError struct {
 
 // newParseError wraps err into ParseError
 func newParseError(err error) error {
-	if err == nil {
-		return nil
-	}
 	return &ParseError{
 		err: err,
 	}
@@ -41,9 +38,6 @@ type FormatError struct {
 
 // newFormatError wraps err into FormatError
 func newFormatError(err error) error {
-	if err == nil {
-		return nil
-	}
 	return &FormatError{
 		err: err,
 	}
