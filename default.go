@@ -15,8 +15,8 @@ var (
 	DefaultComplexFmt  = byte('f')
 	DefaultComplexPrec = -1
 
-	DefaultIndent          = ""
-	DefaultMultiLinePrefix = ""
+	DefaultIndent     = ""
+	DefaultLinePrefix = ""
 )
 
 var (

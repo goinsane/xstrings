@@ -49,7 +49,7 @@ func (h *Handler) FindAndUnmarshal(cmds []Command, args ...string) (Command, err
 	return cmd, h.Unmarshal(cmd, args...)
 }
 
-func (h *Handler) Usage(cmd Command, cmdName string, prefix string) (string, error) {
+func (h *Handler) Usage(cmd Command, cmdName string, linePrefix string) (string, error) {
 	usage, err := h.ParameterUsage(cmd)
 	if err != nil {
 		return "", err
@@ -74,7 +74,7 @@ func (h *Handler) Usage(cmd Command, cmdName string, prefix string) (string, err
 		if idx > 0 {
 			nl = "\n"
 		}
-		result += nl + prefix + cmdName2 + " " + usage
+		result += nl + linePrefix + cmdName2 + " " + usage
 	}
 	return result, nil
 }

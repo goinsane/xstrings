@@ -22,8 +22,8 @@ type Marshaler struct {
 	ComplexFmt  byte
 	ComplexPrec int
 
-	Indent          string
-	MultiLinePrefix string
+	Indent     string
+	LinePrefix string
 
 	FuncFormatBool     func(v bool) string
 	FuncFormatInt      func(v int64) string
@@ -83,9 +83,9 @@ func (m *Marshaler) MarshalByValue(val reflect.Value) (string, error) {
 		indent = DefaultIndent
 	}
 
-	multiLinePrefix := m.MultiLinePrefix
-	if multiLinePrefix == "" {
-		multiLinePrefix = DefaultMultiLinePrefix
+	linePrefix := m.LinePrefix
+	if linePrefix == "" {
+		linePrefix = DefaultLinePrefix
 	}
 
 	typ := val.Type()
@@ -309,7 +309,7 @@ func (m *Marshaler) MarshalByValue(val reflect.Value) (string, error) {
 		prefix := ""
 		if idx > 0 {
 			nl = "\n"
-			prefix = multiLinePrefix
+			prefix = linePrefix
 		}
 		newStr += nl + prefix + line
 	}
