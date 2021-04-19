@@ -142,7 +142,7 @@ func (a *ArgumentStruct) SetFieldByValue(val reflect.Value, name string, values 
 func (a *ArgumentStruct) setFieldVal(val reflect.Value, name string, values ...string) (count int, err error) {
 	unmarshaler := a.Unmarshaler
 	if unmarshaler == nil {
-		unmarshaler = DefaultUnmarshaler
+		unmarshaler = NewUnmarshaler()
 	}
 
 	typ := val.Type()

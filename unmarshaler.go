@@ -26,7 +26,7 @@ type Unmarshaler struct {
 }
 
 func NewUnmarshaler() *Unmarshaler {
-	r := initialDefaultUnmarshaler
+	r := initialUnmarshaler
 	return &r
 }
 

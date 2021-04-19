@@ -36,7 +36,7 @@ type Marshaler struct {
 }
 
 func NewMarshaler() *Marshaler {
-	r := initialDefaultMarshaler
+	r := initialMarshaler
 	return &r
 }
 
